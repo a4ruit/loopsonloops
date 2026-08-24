@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Loops on Loops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bitcount+Single:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  @font-face {
+    font-family: 'VCR OSD Mono';
+    src: url('fonts/VCR_OSD_MONO_1.001.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --blush: #FEDFDF;
+    --ink: #1c1a1a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: linear-gradient(180deg, var(--blush) 0%, #fff 100%);
+    display: grid;
+    place-items: center;
+    font-family: 'Bitcount Single', 'VCR OSD Mono', ui-monospace, monospace;
+    font-weight: 400;
+  }
+
+  /* hairline frame flush to the viewport edge */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    border: 25px solid #fff;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* header block sitting just inside the frame */
+  .header {
+    position: fixed;
+    top: 25px;
+    left: 25px;
+    z-index: 4;
+    width: min(620px, 82vw);
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    /* same breathing room above the pills as to their left */
+    padding: 2rem 0 0 2rem;
+    font-size: 15px;
+    letter-spacing: .06em;
+  }
+
+  /* a white spotlight that fades out into whatever the element's own colour is.
+     the gradient layer sits on top of the element's background colour, so each
+     element supplies its own falloff colour without it being hard-coded here. */
+  .spot {
+    background-image: radial-gradient(
+      circle var(--spot-r, 120px) at var(--spot-x, -999px) var(--spot-y, -999px),
+      rgba(255, 255, 255, var(--spot-a, 0)) 0%,
+      rgba(255, 255, 255, 0) 100%);
+  }
+
+  .nav a {
+    display: inline-flex;
+    align-items: center;
+    height: 2.4rem;
+    padding: 0 1.5rem;
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    background-color: var(--ink);
+    --spot-r: 90px;
+    color: #fff;
+    font-weight: 400;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .3s ease, color .3s ease;
+  }
+
+  /* the open item inverts, so the row keeps its shape while the word
+     reappears as the tray's title */
+  .nav a.active {
+    background-color: transparent;
+    background-image: none;
+    color: var(--ink);
+  }
+
+  /* white tray dropping out from under the header */
+  .tray {
+    height: 0;
+    overflow: hidden;
+    margin-top: .5rem;
+    background: #fff;
+    color: var(--ink);
+    border-radius: 26px;
+    transition: height .55s cubic-bezier(.16,1,.3,1);
+  }
+
+  /* no heading inside the tray: the open pill above is the heading */
+  .panels { padding: 2rem 2rem 2.25rem; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .panel ul { list-style: none; }
+
+  .panel li {
+    display: flex;
+    gap: 2.5rem;
+    font-size: 14px;
+    line-height: 2.1;
+    border-top: 1px solid rgba(28, 26, 26, .12);
+    padding-top: .35rem;
+  }
+
+  .panel li span:first-child {
+    min-width: 8rem;
+    opacity: .55;
+  }
+
+  /* project rows: a small 16:9 still, rounded to match the tray */
+  .works li {
+    align-items: center;
+    gap: 1.25rem;
+    padding: .55rem 0;
+    line-height: 1.4;
+  }
+
+  .works .thumb {
+    width: 104px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+    border: 1px solid rgba(28, 26, 26, .22);
+    border-radius: 10px;
+  }
+
+  /* hero title */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    display: grid;
+    place-content: center;
+    pointer-events: none;
+    user-select: none;
+    color: var(--ink);
+    font-family: 'Bitcount Single', 'VCR OSD Mono', monospace;
+    font-weight: 700;
+    font-size: clamp(3rem, 11vmin, 8.5rem);
+    line-height: .95;
+    letter-spacing: .02em;
+    white-space: nowrap;
+  }
+
+  /* each line is its own hover target */
+  .backdrop span {
+    display: block;
+    width: fit-content;
+    pointer-events: auto;
+    opacity: .82;
+    transition: opacity .45s ease;
+    /* the glyphs themselves are the lit surface, so the spotlight is clipped
+       to the text: ink where it is dark, white under the cursor */
+    background-color: var(--ink);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    --spot-r: 300px;
+  }
+
+  .backdrop span:hover { opacity: 1; }
+
+  /* institutional marks, bottom right, inset to match the header */
+  .marks {
+    position: fixed;
+    right: calc(25px + 2rem);
+    bottom: calc(25px + 2rem);
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    pointer-events: none;
+    opacity: .45;
+  }
+
+  .marks img { display: block; }
+
+  /* supplied as white artwork on transparent, so it is flipped to black here */
+  .marks .magi {
+    height: 20px;
+    filter: invert(1);
+  }
+
+  .marks .rmit { height: 30px; }
+
+  /* hairline divider between the two marks */
+  .marks .rule {
+    width: 1px;
+    height: 26px;
+    background: var(--ink);
+    opacity: .35;
+  }
+
+  /* ---- marquee bands ---- */
+  .bands {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* every band spans the full viewport so its path can travel corner to corner */
+  .band,
+  .charms {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    /* own compositor layer: a moving band then repaints only itself, never the
+       gradient, the hero or its neighbours */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  .charms path {
+    fill: none;
+    stroke: var(--ink);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: .17;
+  }
+
+  .band text {
+    fill: var(--ink);
+    font-family: 'Bitcount Single', 'VCR OSD Mono', monospace;
+    font-weight: 400;
+    opacity: .3;
+    pointer-events: auto;
+    cursor: crosshair;
+    transition: opacity .5s ease;
+    /* stop each glyph snapping to the pixel grid as it slides along the path */
+    text-rendering: geometricPrecision;
+    shape-rendering: geometricPrecision;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .band text:hover { opacity: .85; }
+
+  /* the two supporting bands sit further back */
+  .band-a text { opacity: .45; }
+  .band-b text,
+  .band-c text { opacity: .18; }
+</style>
+</head>
+<body>
+
+<div class="header" id="header">
+  <nav class="nav">
+    <a class="spot" data-panel="schedule">SCHEDULE</a>
+    <a class="spot" data-panel="artists">ARTISTS</a>
+    <a class="spot" data-panel="projects">PROJECTS</a>
+  </nav>
+
+  <div class="tray" id="tray">
+    <div class="panels">
+      <section class="panel" data-panel="schedule">
+        <ul>
+          <li><span>10:00</span><span>Opening remarks</span></li>
+          <li><span>11:00</span><span>Keynote — practice as research</span></li>
+          <li><span>13:30</span><span>Panel — loops, systems, feedback</span></li>
+          <li><span>15:00</span><span>Studio walkthroughs</span></li>
+          <li><span>17:00</span><span>Screening + close</span></li>
+        </ul>
+      </section>
+
+      <section class="panel" data-panel="artists">
+        <ul>
+          <li><span>01</span><span>Mira Kowalczyk — moving image</span></li>
+          <li><span>02</span><span>Teo Alvarez — sound &amp; installation</span></li>
+          <li><span>03</span><span>Nadia Okonkwo — generative print</span></li>
+          <li><span>04</span><span>Rue Hasegawa — animation</span></li>
+          <li><span>05</span><span>Sam Delacroix — sculpture, video</span></li>
+          <li><span>06</span><span>Imogen Fairweather — performance</span></li>
+        </ul>
+      </section>
+
+      <section class="panel" data-panel="projects">
+        <ul class="works">
+          <li>
+            <img class="thumb" src="media/samplemedia/s3588979-days-days.webp" alt="" loading="lazy" />
+            <span>Days, Days</span>
+          </li>
+          <li>
+            <img class="thumb" src="media/samplemedia/s3634079-remnants-of-our-days.webp" alt="" loading="lazy" />
+            <span>Remnants of Our Days</span>
+          </li>
+          <li>
+            <img class="thumb" src="media/samplemedia/s4017090-love-in-the-form-of-an-egg.webp" alt="" loading="lazy" />
+            <span>Love in the Form of an Egg</span>
+          </li>
+          <li>
+            <img class="thumb" src="media/samplemedia/s4148098-hidden-joy.webp" alt="" loading="lazy" />
+            <span>Hidden Joy</span>
+          </li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="marks">
+  <img class="magi" src="media/logo/magi-logo-white.png" alt="MAGI" />
+  <span class="rule"></span>
+  <img class="rmit" src="media/logo/rmit-logo-black.png" alt="RMIT University" />
+</div>
+
+<div class="bands" aria-hidden="true">
+
+  <!-- static layer: loop shapes scattered along the main path -->
+  <svg class="charms" id="charms" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"></svg>
+
+  <!-- main path: bottom-left to top-right, one small loop then one big loop -->
+  <svg class="band band-a" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <path id="wave-a" fill="none" d="
+        M -180,890
+        C 40,846 172,802 312,746
+        C 356,728 386,712 414,690
+        C 452,660 434,604 392,613
+        C 350,622 346,690 404,707
+        C 462,724 560,690 662,639
+        C 762,589 832,545 902,500
+        C 1002,436 1122,358 1132,266
+        C 1140,194 1040,176 990,239
+        C 928,316 990,438 1122,462
+        C 1232,482 1332,403 1422,319
+        C 1512,235 1602,138 1790,34" />
+    </defs>
+    <text xml:space="preserve" font-size="30" data-speed="20"><textPath href="#wave-a" startOffset="0"></textPath></text>
+  </svg>
+
+  <!-- supporting path: wide curl at the left end, then a dive to mid page -->
+  <svg class="band band-b" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <path id="wave-b" fill="none" d="
+        M -180,296
+        C -80,268 22,238 124,204
+        C 244,164 326,106 272,54
+        C 218,2 116,42 114,126
+        C 112,212 222,290 342,350
+        C 462,410 566,454 706,472
+        C 866,492 1004,432 1164,392
+        C 1344,347 1566,318 1790,300" />
+    </defs>
+    <text xml:space="preserve" font-size="18" data-speed="-12"><textPath href="#wave-b" startOffset="0"></textPath></text>
+  </svg>
+
+  <!-- supporting path: shallow drift across the lower half -->
+  <svg class="band band-c" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <path id="wave-c" fill="none" d="
+        M -180,706
+        C 150,768 342,640 562,662
+        C 782,684 902,782 1122,760
+        C 1342,738 1522,648 1790,694" />
+    </defs>
+    <text xml:space="preserve" font-size="18" data-speed="9"><textPath href="#wave-c" startOffset="0"></textPath></text>
+  </svg>
+
+</div>
+
+<div class="backdrop">
+  <span class="spot">LOOPS ON LOOPS</span>
+  <span class="spot">/26</span>
+  <span class="spot">/SYMPOSIUM</span>
+</div>
+
+<script>
+  const UNIT = 'LOOPS ON ';
+
+  // --- marquee bands ---------------------------------------------------
+  const SLOW = 0.12;   // speed multiplier while hovered
+  const EASE = 0.045;  // how quickly the multiplier catches up
+
+  const bands = [...document.querySelectorAll('.band')].map(svg => {
+    const text = svg.querySelector('text');
+    return {
+      svg,
+      text,
+      tp: svg.querySelector('textPath'),
+      path: svg.querySelector('path'),
+      speed: parseFloat(text.dataset.speed), // user units/sec, sign = direction
+      unit: 0,
+      offset: 0,
+      written: NaN,
+      factor: 1,
+      target: 1
+    };
+  });
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // one turn of the main band's pattern: seven shape berths, three repeats apart
+  const SLOT_SPACING = 3;
+  const PERIOD_REPEATS = 7 * SLOT_SPACING + 2;
+  let slots = [];   // the shape berths inside that pattern
+
+  // Measure on a plain <text>, NOT on the textPath: a textPath only reports the
+  // glyphs it actually draws, and anything past the end of the path is dropped —
+  // measuring there returns a short value, and shifting by a short value is
+  // exactly the jump you see each time the loop restarts.
+  function measure(svg, sample, str) {
+    if (!str) return 0;
+    const probe = document.createElementNS(SVG_NS, 'text');
+    probe.setAttribute('font-size', sample.getAttribute('font-size'));
+    probe.setAttribute('x', '0');
+    probe.setAttribute('y', '-9999');
+    probe.setAttribute('visibility', 'hidden');
+    probe.setAttribute('xml:space', 'preserve');
+    probe.textContent = str;
+    svg.appendChild(probe);
+    const w = probe.getComputedTextLength();
+    probe.remove();
+    return w;
+  }
+
+  // tile each path with enough repeats to overhang both ends, so the seam never shows
+  function layout() {
+    for (const b of bands) {
+      b.pattern = (b === bands[0]) ? mainPattern(b) : UNIT;
+      b.unit = measure(b.svg, b.text, b.pattern);
+      // + 3 units of slack: one for the head overhang, two so the tail still
+      // reaches past the end of the path at every point in the cycle
+      const need = Math.ceil((b.path.getTotalLength() + b.unit * 3) / b.unit) + 1;
+      b.tp.textContent = b.pattern.repeat(need);
+      b.offset = 0;
+      b.written = NaN;
+    }
+  }
+
+  // The main band's repeating unit is a run of "LOOPS ON " with blanks punched
+  // into it — each blank is a berth for a shape, so the line genuinely breaks
+  // instead of the shape being laid over the type. Returns the period string and
+  // records where the middle of each gap falls, in user units from the period's start.
+  function mainPattern(b) {
+    if (!slots.length) return UNIT;
+
+    const NBSP = ' ';   // plain spaces collapse in SVG text; these do not
+    const gapW = measure(b.svg, b.text, NBSP.repeat(20)) / 20 || 1;
+
+    const tokens = Array(PERIOD_REPEATS).fill(UNIT);
+    for (const s of slots) {
+      // a berth wide enough for the shape plus breathing room either side
+      s.gap = NBSP.repeat(Math.max(3, Math.round((200 * s.scale + 130) / gapW)));
+      tokens[s.index] = s.gap;
+    }
+
+    for (const s of slots) {
+      const before = tokens.slice(0, s.index).join('');
+      s.centre = measure(b.svg, b.text, before) + measure(b.svg, b.text, s.gap) / 2;
+    }
+
+    return tokens.join('');
+  }
+
+  layout();
+  // the repeat width settles once Bitcount actually loads, and the shape pattern
+  // is measured in repeats, so both are refitted together
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => { layout(); buildRiders(); });
+  }
+
+  bands.forEach(b => {
+    b.text.addEventListener('pointerenter', () => { b.target = SLOW; });
+    b.text.addEventListener('pointerleave', () => { b.target = 1; });
+  });
+
+  // laying out text on a path is the expensive part of the frame, so the two
+  // faint supporting bands only refresh on alternate frames — at their speed and
+  // opacity the halved rate is invisible, and it cuts the per-frame work by a third
+  bands[0].every = 1;
+  bands[1].every = 2;
+  bands[2].every = 2;
+  bands[1].phase = 0;
+  bands[2].phase = 1;
+
+  let last = performance.now();
+  let frame = 0;
+  let running = true;
+
+  function tick(now) {
+    // a long frame (tab wake, layout hitch) must not translate into a lurch
+    const dt = Math.min((now - last) / 1000, 1 / 30);
+    last = now;
+    frame++;
+
+    for (const b of bands) {
+      // frame-rate independent easing: same curve at 60Hz, 120Hz or a dropped frame
+      b.factor += (b.target - b.factor) * (1 - Math.pow(1 - EASE, dt * 60));
+
+      b.offset += b.speed * b.factor * dt;
+      // wrap within one repeat so the scroll reads as endless
+      if (b.offset >= b.unit) b.offset -= b.unit;
+      else if (b.offset < 0) b.offset += b.unit;
+
+      if (b.every > 1 && frame % b.every !== b.phase) continue;
+
+      const next = b.offset - b.unit;
+      // a write below a hundredth of a unit cannot change a rendered glyph, but
+      // it does force the whole string to be re-laid out along the path
+      if (Math.abs(next - b.written) < 0.01) continue;
+      b.written = next;
+      b.tp.setAttribute('startOffset', next.toFixed(2));
+    }
+
+    // shapes ride the same scroll value as the main band's text
+    placeRiders(bands[0].offset);
+    updateSpots(dt);
+
+    if (running) requestAnimationFrame(tick);
+  }
+
+  requestAnimationFrame(tick);
+
+  // a hidden tab should not be laying out text on paths
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      running = false;
+    } else if (!running) {
+      running = true;
+      last = performance.now();
+      requestAnimationFrame(tick);
+    }
+  });
+
+  // --- spotlight that trails the cursor across the dark elements -------
+  // Deliberately scoped to elements carrying .spot — the page background never
+  // lights up, only the black pills and the ink hero lines.
+  const DRAG = 0.055;   // lower = heavier lag behind the pointer
+  const FADE = 0.10;    // how fast the light comes up and dies away
+
+  const spots = [...document.querySelectorAll('.spot')].map(el => ({
+    el, tx: 0, ty: 0, x: 0, y: 0, a: 0, ta: 0, live: false
+  }));
+
+  spots.forEach(s => {
+    s.el.addEventListener('pointerenter', e => {
+      const r = s.el.getBoundingClientRect();
+      s.tx = e.clientX - r.left;
+      s.ty = e.clientY - r.top;
+      // start under the cursor rather than sweeping in from a stale position
+      if (s.a < 0.01) { s.x = s.tx; s.y = s.ty; }
+      s.ta = 1;
+      s.live = true;
+    });
+    s.el.addEventListener('pointermove', e => {
+      const r = s.el.getBoundingClientRect();
+      s.tx = e.clientX - r.left;
+      s.ty = e.clientY - r.top;
+    });
+    s.el.addEventListener('pointerleave', () => { s.ta = 0; });
+  });
+
+  function updateSpots(dt) {
+    for (const s of spots) {
+      if (!s.live) continue;
+
+      const kMove = 1 - Math.pow(1 - DRAG, dt * 60);
+      const kFade = 1 - Math.pow(1 - FADE, dt * 60);
+
+      s.x += (s.tx - s.x) * kMove;
+      s.y += (s.ty - s.y) * kMove;
+      s.a += (s.ta - s.a) * kFade;
+
+      s.el.style.setProperty('--spot-x', s.x.toFixed(1) + 'px');
+      s.el.style.setProperty('--spot-y', s.y.toFixed(1) + 'px');
+      s.el.style.setProperty('--spot-a', s.a.toFixed(3));
+
+      // fully dark again: stop touching it until the pointer comes back
+      if (s.ta === 0 && s.a < 0.005) {
+        s.a = 0;
+        s.live = false;
+        s.el.style.setProperty('--spot-a', '0');
+      }
+    }
+  }
+
+  // --- loop shapes travelling in the main path's marquee ---------------
+  const SHAPES = ['loop-clover', 'loop-eight', 'loop-knot', 'loop-o', 'loop-pretzel', 'loop-spiral', 'loop-trefoil'];
+  const charms = document.getElementById('charms');
+  const mainBand = bands[0];
+  const mainPath = mainBand.path;
+
+  const rand = (min, max) => min + Math.random() * (max - min);
+
+  let shapeDefs = null;   // path data, once fetched
+  let riders = [];        // live elements, each a copy of a slot one period apart
+
+  // One berth per shape, walking the list in order, so a full turn of the pattern
+  // shows every file before any of them comes round again. The period has to hold
+  // all of them: the marquee wraps by exactly one period, so anything that varies
+  // between periods would visibly jump at the wrap.
+  function makeSlots() {
+    slots = [];
+    for (let i = 0; i < shapeDefs.length; i++) {
+      slots.push({
+        // evenly spaced berths, nudged a repeat either way so it never reads as a grid
+        index: 1 + i * SLOT_SPACING + Math.floor(rand(0, 2)),
+        shape: i,
+        scale: rand(0.16, 0.44),
+        spin: rand(0, 360)
+      });
+    }
+  }
+
+  function buildRiders() {
+    if (!shapeDefs || !mainBand.unit) return;
+
+    charms.textContent = '';
+    riders = [];
+
+    const period = mainBand.unit;   // one full pattern, gaps included
+    const total = mainPath.getTotalLength();
+    const reps = Math.ceil(total / period) + 2;
+
+    for (let k = -1; k < reps; k++) {
+      for (const s of slots) {
+        const g = document.createElementNS(SVG_NS, 'g');
+        const path = document.createElementNS(SVG_NS, 'path');
+        path.setAttribute('d', shapeDefs[s.shape]);
+        // keep the stroke readable however small the shape is drawn
+        path.setAttribute('stroke-width', (13 * Math.min(1, 0.34 / s.scale)).toFixed(1));
+        g.appendChild(path);
+        charms.appendChild(g);
+        // sits at the middle of the blank its own slot punched in the text
+        riders.push({ g, slot: s, base: k * period + s.centre });
+      }
+    }
+  }
+
+  // place every rider for the current scroll position
+  function placeRiders(scroll) {
+    if (!riders.length) return;
+    const period = mainBand.unit;
+    const total = mainPath.getTotalLength();
+    const phase = ((scroll % period) + period) % period;
+
+    for (const r of riders) {
+      const at = r.base + phase;
+
+      if (at < 0 || at > total) {
+        if (r.shown !== false) { r.g.setAttribute('display', 'none'); r.shown = false; }
+        continue;
+      }
+      if (r.shown === false) { r.g.removeAttribute('display'); r.shown = true; }
+
+      const p = mainPath.getPointAtLength(at);
+      const q = mainPath.getPointAtLength(Math.min(total, at + 6));
+      // ride the tangent, so a shape banks through the loop-de-loops with the text
+      const angle = Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI;
+      // sit in the line, lifted off the baseline to the type's optical centre
+      const push = -11;
+      const rad = (angle * Math.PI) / 180;
+      const x = p.x - Math.sin(rad) * push;
+      const y = p.y + Math.cos(rad) * push;
+
+      r.g.setAttribute('transform',
+        `translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(angle + r.slot.spin).toFixed(1)}) ` +
+        `scale(${r.slot.scale.toFixed(3)}) translate(-100,-100)`);
+    }
+  }
+
+  Promise.all(SHAPES.map(name =>
+    fetch(`media/${name}.svg`)
+      .then(r => r.text())
+      .then(txt => (txt.match(/\sd="([^"]+)"/) || [])[1])
+  )).then(defs => {
+    shapeDefs = defs.filter(Boolean);
+    if (!shapeDefs.length) return;
+    // choose the berths, re-tile the text around them, then hang the shapes in
+    makeSlots();
+    layout();
+    buildRiders();
+  }).catch(() => { /* shapes are decorative; a failed fetch just leaves them out */ });
+
+  // --- tray ------------------------------------------------------------
+  const header = document.getElementById('header');
+  const tray = document.getElementById('tray');
+  const links = [...document.querySelectorAll('.nav a')];
+  const panels = [...document.querySelectorAll('.panel')];
+  let pinned = null;
+  let closeTimer;
+
+  function open(name) {
+    clearTimeout(closeTimer);
+    const link = links.find(a => a.dataset.panel === name);
+    links.forEach(a => a.classList.toggle('active', a === link));
+    panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+    tray.style.height = tray.scrollHeight + 'px';
+  }
+
+  function close() {
+    pinned = null;
+    links.forEach(a => a.classList.remove('active'));
+    tray.style.height = '0px';
+    closeTimer = setTimeout(() => {
+      if (!pinned) panels.forEach(p => p.classList.remove('active'));
+    }, 550);
+  }
+
+  links.forEach(a => {
+    a.addEventListener('pointerenter', () => open(a.dataset.panel));
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      if (pinned === a.dataset.panel) { close(); } else { pinned = a.dataset.panel; open(pinned); }
+    });
+  });
+
+  header.addEventListener('pointerleave', () => { if (!pinned) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  document.addEventListener('click', e => {
+    if (pinned && !header.contains(e.target)) close();
+  });
+</script>
+
+</body>
+</html>
