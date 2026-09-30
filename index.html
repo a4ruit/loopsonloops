@@ -86,6 +86,13 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  /* While a list is on stage with somewhere left to go, the page gives up
+     its own vertical panning so the drag can be handed to that list.
+     Chrome ignores preventDefault once a native scroll has begun, so the
+     gesture has to be claimed before it starts. pinch-zoom is left alone —
+     taking that away would cost more than the effect is worth. */
+  html.holding, html.holding body { touch-action: pan-x pinch-zoom; }
+
   html {
     /* the composition is fixed; this is the runway the patterns are timed
        against. --scroll-len is how far the page travels, in viewports. */
@@ -2051,6 +2058,7 @@
     links.forEach(a => a.classList.toggle('active', a.dataset.panel === name));
     panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
     dots.classList.toggle('on', !!name);
+    requestAnimationFrame(syncHold);
     for (const mark of dots.children) mark.classList.toggle('cur', mark.dataset.panel === name);
 
     if (arriving) requestAnimationFrame(() => paintBands(arriving));
@@ -2170,6 +2178,15 @@
      through the same places.
      ------------------------------------------------------------------ */
 
+  /* the page only surrenders its panning while there is a list to feed */
+  function syncHold() {
+    const panel = panels.find(p => p.classList.contains('active'));
+    const holds = !!panel && panel.scrollHeight - panel.clientHeight > 4;
+    document.documentElement.classList.toggle('holding', holds);
+  }
+
+  window.addEventListener('resize', syncHold);
+
   function heldPanel() {
     const panel = panels.find(p => p.classList.contains('active'));
     if (!panel) return null;
@@ -2253,6 +2270,51 @@
     capTarget = Math.max(capPos - CAP_LEAD, Math.min(capPos + CAP_LEAD, capTarget));
     capWake();
   }, { passive: false });
+
+  /* The same hand-off for touch. There is no wheel event on a phone, so
+     without this the page simply scrolls past every panel and their lists
+     are never read. Only the hold is reproduced: while the list has
+     somewhere to go the drag belongs to it, and once it runs out the
+     finger is handed back to the page with its native momentum intact. */
+
+  let touchY = null;
+
+  window.addEventListener('touchstart', e => {
+    touchY = e.touches.length === 1 ? e.touches[0].clientY : null;
+  }, { passive: true });
+
+  window.addEventListener('touchmove', e => {
+    if (touchY === null || e.touches.length !== 1) return;
+
+    const y = e.touches[0].clientY;
+    const dy = touchY - y;                 // finger moving up = going down
+    if (!dy) return;
+    lastDir = dy > 0 ? 1 : -1;
+
+    const panel = heldPanel();
+    if (!panel) { touchY = y; return; }
+
+    const max = panel.scrollHeight - panel.clientHeight;
+    const room = dy > 0 ? panel.scrollTop < max - 1 : panel.scrollTop > 1;
+
+    e.preventDefault();
+    if (room) {
+      // one to one with the finger: anything eased would feel detached
+      panel.scrollTop = Math.max(0, Math.min(max, panel.scrollTop + dy));
+      paintBands(panel);
+    } else {
+      // the list is spent, so the rest of this drag carries the page on
+      // rather than the gesture dying in the user's hand
+      const travel = document.documentElement.scrollHeight - window.innerHeight;
+      capTarget = Math.max(0, Math.min(travel, capTarget + dy));
+      capTarget = Math.max(capPos - CAP_LEAD, Math.min(capPos + CAP_LEAD, capTarget));
+      capWake();
+    }
+    touchY = y;
+  }, { passive: false });
+
+  window.addEventListener('touchend', () => { touchY = null; }, { passive: true });
+  window.addEventListener('touchcancel', () => { touchY = null; }, { passive: true });
 
   /* ------------------------------------------------------------------
      SCROLL CAP
