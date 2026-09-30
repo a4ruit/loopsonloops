@@ -58,7 +58,7 @@
   html {
     /* the composition is fixed; this is the runway the patterns are timed
        against. --scroll-len is how far the page travels, in viewports. */
-    --scroll-len: 400vh;
+    --scroll-len: 800vh;
     scroll-behavior: auto;
   }
 
@@ -576,6 +576,9 @@
 
   .card .body { padding: .35rem .4rem .45rem; }
 
+  /* the column heading already says where; only the stacked view needs it */
+  .card .where { display: none; }
+
   /* breaks are the empty rows; this just names them, sitting in the gap
      rather than filling it with another card */
   .gap {
@@ -829,6 +832,123 @@
     background: var(--paper);
     opacity: .35;
   }
+
+  /* ------------------------------------------------------------------
+     NARROW SCREENS
+     The grid is re-authored rather than squeezed: half the columns, more
+     rows, so cells stay chunky instead of turning into slivers. Panels
+     take most of the screen, and the schedule's four location columns
+     collapse into one chronological stack.
+     ------------------------------------------------------------------ */
+  @media (max-width: 760px) {
+    :root {
+      --cols: 12;
+      --rows: 20;
+      --ui: 12px;
+
+      --hero-col: 1;
+      --hero-row: 3;
+      --hero-w: 12;
+      --hero-h: 3;
+      --hero-size: clamp(1.9rem, 9vmin, 3rem);
+
+      --panel-col: 1;
+      --panel-row: 7;
+      --panel-w: 12;
+      /* stops at row 16 of 20, leaving the bottom fifth of the screen to
+         the event details and the two lockups */
+      --panel-h: 10;
+      --statement-shift: 0;
+
+      --blur-start: 62%;
+      --blur-max: 16px;
+    }
+
+    /* the header was capped at 82vw, which is what forced the row to wrap */
+    .header { width: 100%; }
+
+    .nav {
+      flex-wrap: nowrap;
+      gap: clamp(.25rem, 1.4vw, .5rem);
+      padding: 1rem 1rem 0;
+    }
+
+    /* pills scale with the viewport so four always fit on one line */
+    .nav a {
+      height: 2.1rem;
+      padding: 0 clamp(.5rem, 2.6vw, 1rem);
+      font-size: clamp(9px, 2.9vw, 12px);
+    }
+
+    /* under the buttons rather than beside them */
+    .eventinfo {
+      top: auto;
+      bottom: 4.6rem;
+      right: 1rem;
+      left: 1rem;
+      text-align: left;
+      font-size: 11px;
+    }
+
+    .hero h1 { padding-left: 1rem; }
+
+    .statement {
+      max-width: none;
+      padding: 0 1rem;
+      font-size: clamp(.95rem, 4.2vmin, 1.25rem);
+    }
+
+    .panel { padding: 1rem .9rem; }
+
+    /* each keeps its own scrollbar, with a gap between them so the two
+       do not read as one confused control */
+    .stage { padding: 0 1.5rem 0 .6rem; }
+
+    /* the marker rail has no room beside a full-width panel */
+    .dots {
+      top: -1.6rem;
+      left: .6rem;
+      flex-direction: row;
+    }
+
+    /* schedule: one chronological column, each card saying where it is */
+    .locs-head { display: none; }
+    .sched::before { display: none; }
+    .sched { padding-top: .5rem; }
+
+    .locs { display: block; }
+
+    .card {
+      margin: 0 0 .45rem;
+      display: block;
+    }
+
+    .card .where {
+      display: block;
+      margin-bottom: .1rem;
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      opacity: .5;
+    }
+
+    .gap { margin: .9rem 0 .5rem; }
+
+    .speakers li { font-size: clamp(1rem, 5vmin, 1.4rem); }
+    .works .thumb, .works .frame { width: 100%; max-width: none; }
+    .gallery { grid-template-columns: repeat(2, 1fr); }
+    .credits { padding-top: 1rem; }
+
+    /* the two lockups cannot share a line at this width */
+    .brand { left: 1rem; bottom: 1rem; gap: .5rem; }
+    .brand img { width: 40px; height: 40px; margin-left: -.35rem; }
+    .brand .wordmark { display: none; }
+
+    .marks { right: 1rem; bottom: 1rem; gap: .9rem; }
+    .marks .magi { height: 14px; }
+    .marks .rmit { height: 21px; }
+    .marks .rule { height: 18px; }
+  }
 </style>
 </head>
 <body>
@@ -856,83 +976,82 @@
         </div>
 
         <div class="locs">
-          <div class="gap" style="grid-row: 4 / span 1;"><span>3:15 Break</span><i></i></div>
-          <div class="gap" style="grid-row: 11 / span 1;"><span>5:00 Break</span><i></i></div>
-
           <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 1 / span 3;">
             <div class="top"><span class="time">2:30 – 3:15</span><span class="tag">Keynote</span></div>
-            <div class="body"><span class="who">Opening address</span></div>
+            <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Opening address</span></div>
           </div>
-          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 12 / span 3;">
-            <div class="top"><span class="time">5:15 – 6:00</span><span class="tag">Keynote</span></div>
-            <div class="body"><span class="who">Closing remarks</span> <span class="dot">&#9679;</span> <span class="what">Talks continue after</span></div>
-          </div>
-          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 20 / span 1;">
-            <div class="top"><span class="time">7:15 – 7:30</span><span class="tag">Close</span></div>
-            <div class="body"><span class="who">Thanks for coming</span></div>
-          </div>
+          <div class="gap" style="grid-row: 4 / span 1;"><span>3:15 Break</span><i></i></div>
           <div class="card" style="grid-column: 2 / span 1; grid-row: 5 / span 2;">
             <div class="top"><span class="time">3:30 – 4:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student A</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 7 / span 2;">
-            <div class="top"><span class="time">4:00 – 4:30</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student B</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 9 / span 2;">
-            <div class="top"><span class="time">4:30 – 5:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student C</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 15 / span 2;">
-            <div class="top"><span class="time">6:00 – 6:30</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student G</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 17 / span 2;">
-            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student H</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 19 / span 1;">
-            <div class="top"><span class="time">7:00 – 7:15</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student I</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student A</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
           </div>
           <div class="card" style="grid-column: 3 / span 1; grid-row: 5 / span 2;">
             <div class="top"><span class="time">3:30 – 4:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student D</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student D</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 7 / span 2;">
+            <div class="top"><span class="time">4:00 – 4:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student B</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
           </div>
           <div class="card" style="grid-column: 3 / span 1; grid-row: 7 / span 2;">
             <div class="top"><span class="time">4:00 – 4:30</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student E</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student E</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 9 / span 2;">
+            <div class="top"><span class="time">4:30 – 5:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student C</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
           </div>
           <div class="card" style="grid-column: 3 / span 1; grid-row: 9 / span 2;">
             <div class="top"><span class="time">4:30 – 5:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student F</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 15 / span 2;">
-            <div class="top"><span class="time">6:00 – 6:30</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student J</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 17 / span 2;">
-            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student K</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 19 / span 1;">
-            <div class="top"><span class="time">7:00 – 7:15</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="who">Student L</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student F</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
           </div>
           <div class="card showcase" style="grid-column: 4 / span 1; grid-row: 9 / span 6;">
             <div class="top"><span class="time">4:30 – 6:00</span><span class="tag">Showcase</span></div>
-            <div class="body"><span class="who">Animation &amp; video essays</span> <span class="dot">&#9679;</span> <span class="what">On loop, drop in</span></div>
+            <div class="body"><span class="where">MegaFlex 3</span><span class="who">Animation &amp; video essays</span> <span class="dot">&#9679;</span> <span class="what">On loop, drop in</span></div>
           </div>
-          <div class="card demo" style="grid-column: 4 / span 1; grid-row: 15 / span 5;">
-            <div class="top"><span class="time">6:00 – 7:15</span><span class="tag">Live demo</span></div>
-            <div class="body"><span class="who">Playtest floor</span> <span class="dot">&#9679;</span> <span class="what">Games, open play</span></div>
+          <div class="gap" style="grid-row: 11 / span 1;"><span>5:00 Break</span><i></i></div>
+          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 12 / span 3;">
+            <div class="top"><span class="time">5:15 – 6:00</span><span class="tag">Keynote</span></div>
+            <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Closing remarks</span> <span class="dot">&#9679;</span> <span class="what">Talks continue after</span></div>
           </div>
           <div class="card social" style="grid-column: 2 / span 2; grid-row: 12 / span 3;">
             <div class="top"><span class="time">5:15 – 6:00</span><span class="tag">Networking</span></div>
-            <div class="body"><span class="who">Mingle space</span> <span class="dot">&#9679;</span> <span class="what">MegaFlex 1 &amp; 2</span></div>
+            <div class="body"><span class="where">MegaFlex 1 &amp; 2</span><span class="who">Mingle space</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 15 / span 2;">
+            <div class="top"><span class="time">6:00 – 6:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student G</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 15 / span 2;">
+            <div class="top"><span class="time">6:00 – 6:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student J</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card demo" style="grid-column: 4 / span 1; grid-row: 15 / span 5;">
+            <div class="top"><span class="time">6:00 – 7:15</span><span class="tag">Live demo</span></div>
+            <div class="body"><span class="where">MegaFlex 3</span><span class="who">Playtest floor</span> <span class="dot">&#9679;</span> <span class="what">Games, open play</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 17 / span 2;">
+            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student H</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 17 / span 2;">
+            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student K</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 19 / span 1;">
+            <div class="top"><span class="time">7:00 – 7:15</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student I</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 19 / span 1;">
+            <div class="top"><span class="time">7:00 – 7:15</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student L</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 20 / span 1;">
+            <div class="top"><span class="time">7:15 – 7:30</span><span class="tag">Close</span></div>
+            <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Thanks for coming</span></div>
           </div>
         </div>
-        </div>
+      </div>
       </section>
 
       <section class="panel ruled" data-panel="speakers">
@@ -1180,18 +1299,36 @@
 
   const grid = document.getElementById('grid');
 
-  function place(el, b) {
-    el.style.gridColumn = `${b.c} / span ${b.w || 1}`;
-    el.style.gridRow = `${b.r} / span ${b.h || 1}`;
+  // BLOCKS and SUBGRIDS are authored against a 24 x 14 field. When the
+  // breakpoint re-authors the grid (12 x 20 on a phone), coordinates are
+  // rescaled into it rather than the cells being squeezed thinner.
+  const AUTHOR_COLS = 24;
+  const AUTHOR_ROWS = 14;
+
+  function gridSize() {
+    const cs = getComputedStyle(document.documentElement);
+    return { c: +cs.getPropertyValue('--cols'), r: +cs.getPropertyValue('--rows') };
+  }
+
+  function place(el, b, size) {
+    const sx = size.c / AUTHOR_COLS;
+    const sy = size.r / AUTHOR_ROWS;
+    const c = Math.round((b.c - 1) * sx) + 1;
+    const r = Math.round((b.r - 1) * sy) + 1;
+    const w = Math.max(1, Math.round((b.w || 1) * sx));
+    const h = Math.max(1, Math.round((b.h || 1) * sy));
+    el.style.gridColumn = `${c} / span ${w}`;
+    el.style.gridRow = `${r} / span ${h}`;
   }
 
   function paintGrid() {
     grid.textContent = '';
+    const size = gridSize();
 
     for (const b of BLOCKS) {
       const el = document.createElement('div');
       el.className = 'block' + (b.tone ? ' ' + b.tone : '');
-      place(el, b);
+      place(el, b, size);
       grid.appendChild(el);
     }
 
@@ -1199,14 +1336,15 @@
       const scale = s.scale || 2;
       const box = document.createElement('div');
       box.className = 'subgrid';
-      place(box, s);
+      place(box, s, size);
       box.style.setProperty('--sc', (s.w || 1) * scale);
       box.style.setProperty('--sr', (s.h || 1) * scale);
 
       for (const b of s.cells) {
         const el = document.createElement('div');
         el.className = 'block' + (b.tone ? ' ' + b.tone : '');
-        place(el, b);
+        el.style.gridColumn = `${b.c} / span ${b.w || 1}`;
+        el.style.gridRow = `${b.r} / span ${b.h || 1}`;
         box.appendChild(el);
       }
       grid.appendChild(box);
@@ -1214,6 +1352,14 @@
   }
 
   paintGrid();
+
+  const narrow = window.matchMedia('(max-width: 760px)');
+  const onBreakpoint = () => {
+    paintGrid();
+    if (typeof buildRiders === 'function') buildRiders();
+  };
+  if (narrow.addEventListener) narrow.addEventListener('change', onBreakpoint);
+  else narrow.addListener(onBreakpoint);
 
   // G toggles the guide lines while composing
   document.addEventListener('keydown', e => {
@@ -1788,15 +1934,6 @@
   // first read of the scroll position, once everything above is defined
   requestAnimationFrame(() => syncScrollPanel(scrollEased));
 
-  /* ------------------------------------------------------------------
-     ONE SCROLL
-     A panel with more content than fits takes the scroll over while it has
-     somewhere left to go: the page holds still, the list moves, and once
-     the list reaches its end the page picks up again. Scrolling back up
-     does the same in reverse, so the journey down and the journey up pass
-     through the same places.
-     ------------------------------------------------------------------ */
-
   /* Entries arrive and leave the way everything else on the page does:
      out of blur at the edges of the panel, resolved through the middle.
      Driven from the list's own scroll position, so it reads as part of the
@@ -1848,6 +1985,15 @@
 
   window.addEventListener('resize', () => panels.forEach(paintBands));
 
+  /* ------------------------------------------------------------------
+     ONE SCROLL
+     A panel with more content than fits takes the scroll over while it has
+     somewhere left to go: the page holds still, the list moves, and once
+     the list reaches its end the page picks up again. Scrolling back up
+     does the same in reverse, so the journey down and the journey up pass
+     through the same places.
+     ------------------------------------------------------------------ */
+
   function heldPanel() {
     const panel = panels.find(p => p.classList.contains('active'));
     if (!panel) return null;
@@ -1857,8 +2003,7 @@
 
   /* The list glides the way the page does: the wheel moves a target and
      the list chases it on a time constant, rather than jumping a notch per
-     event. Same easing shape as the scroll that drives the patterns, just
-     a little tighter so the list still feels attached to the hand. */
+     event. */
 
   const LIST_TAU = .12;
 
@@ -1906,23 +2051,80 @@
     lastDir = dy > 0 ? 1 : -1;
 
     const panel = heldPanel();
-    if (!panel) return;
+    if (panel) {
+      if (listPanel !== panel) { listPanel = panel; listTarget = panel.scrollTop; }
 
-    if (listPanel !== panel) { listPanel = panel; listTarget = panel.scrollTop; }
+      const max = panel.scrollHeight - panel.clientHeight;
+      // measured against the target, not the current position, so several
+      // wheel events in quick succession accumulate instead of fighting
+      const room = dy > 0 ? listTarget < max - 1 : listTarget > 1;
 
-    const max = panel.scrollHeight - panel.clientHeight;
-    // measured against the target, not the current position, so several
-    // wheel events in quick succession accumulate instead of fighting
-    const room = dy > 0 ? listTarget < max - 1 : listTarget > 1;
-
-    if (room) {
-      // the list still has somewhere to go, so it keeps the scroll
-      e.preventDefault();
-      listTarget = Math.max(0, Math.min(max, listTarget + dy));
-      listWake(panel);
+      if (room) {
+        // the list still has somewhere to go, so it keeps the scroll
+        e.preventDefault();
+        listTarget = Math.max(0, Math.min(max, listTarget + dy));
+        // a flick cannot queue more than this much travel
+        listTarget = Math.max(panel.scrollTop - CAP_LEAD, Math.min(panel.scrollTop + CAP_LEAD, listTarget));
+        listWake(panel);
+        return;
+      }
     }
-    // otherwise fall through and let the page carry on
+
+    // the page itself is metered the same way
+    e.preventDefault();
+    const travel = document.documentElement.scrollHeight - window.innerHeight;
+    capTarget = Math.max(0, Math.min(travel, capTarget + dy));
+    capTarget = Math.max(capPos - CAP_LEAD, Math.min(capPos + CAP_LEAD, capTarget));
+    capWake();
   }, { passive: false });
+
+  /* ------------------------------------------------------------------
+     SCROLL CAP
+     A flick of the wheel asks for far more travel than it looks like — a
+     single trackpad fling can be several screens. The page is driven at a
+     bounded speed instead: the wheel adds to a target, and the page walks
+     toward it at no more than CAP_SPEED. Scrolling hard makes the journey
+     continuous rather than instant, so nothing gets skipped past.
+
+     CAP_LEAD stops the target running away: without it, a long fling would
+     queue a journey that keeps travelling after the hand has stopped.
+     ------------------------------------------------------------------ */
+
+  const CAP_SPEED = 800;    // px per second, the fastest the page will move
+  const CAP_LEAD = 700;     // px the target may run ahead of the page
+
+  let capPos = window.scrollY;
+  let capTarget = window.scrollY;
+  let capLast = 0;
+  let capRunning = false;
+
+  function capWake() {
+    if (capRunning) return;
+    capRunning = true;
+    capLast = performance.now();
+    requestAnimationFrame(capFrame);
+  }
+
+  function capFrame(now) {
+    const dt = Math.min((now - capLast) / 1000, 1 / 30);
+    capLast = now;
+
+    // something other than us moved the page — a scrollbar drag, a marker
+    // jump, the keyboard — so adopt its position rather than fight it
+    if (Math.abs(window.scrollY - capPos) > 2) {
+      capPos = window.scrollY;
+      capTarget = Math.max(capPos - CAP_LEAD, Math.min(capPos + CAP_LEAD, capTarget));
+    }
+
+    const diff = capTarget - capPos;
+    if (Math.abs(diff) < .5) { capRunning = false; return; }
+
+    capPos += Math.sign(diff) * Math.min(Math.abs(diff), CAP_SPEED * dt);
+    window.scrollTo(0, capPos);
+    requestAnimationFrame(capFrame);
+  }
+
+  window.addEventListener('resize', () => { capPos = window.scrollY; capTarget = capPos; });
 
 </script>
 
