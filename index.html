@@ -2279,9 +2279,15 @@
      finger is handed back to the page with its native momentum intact. */
 
   let touchY = null;
+  let touchT = 0;
+  let touchV = 0;        // px per ms, smoothed
+  let touchPanel = null; // whichever surface the drag is feeding
 
   window.addEventListener('touchstart', e => {
     touchY = e.touches.length === 1 ? e.touches[0].clientY : null;
+    touchT = performance.now();
+    touchV = 0;
+    touchPanel = null;
   }, { passive: true });
 
   window.addEventListener('touchmove', e => {
@@ -2289,8 +2295,14 @@
 
     const y = e.touches[0].clientY;
     const dy = touchY - y;                 // finger moving up = going down
+    const now = performance.now();
+    const gap = Math.max(1, now - touchT);
+    touchT = now;
     if (!dy) return;
     lastDir = dy > 0 ? 1 : -1;
+
+    // a smoothed read of how fast the finger is travelling, for the glide
+    touchV = touchV * .7 + (dy / gap) * .3;
 
     // the page is metered on touch exactly as it is on the wheel
     e.preventDefault();
@@ -2301,9 +2313,12 @@
 
     if (room) {
       // one to one with the finger: anything eased would feel detached
+      // while it is still being dragged
+      touchPanel = panel;
       panel.scrollTop = Math.max(0, Math.min(max, panel.scrollTop + dy));
       paintBands(panel);
     } else {
+      touchPanel = null;
       // the list is spent, so the rest of this drag carries the page on
       // rather than the gesture dying in the user's hand
       const travel = document.documentElement.scrollHeight - window.innerHeight;
@@ -2314,8 +2329,31 @@
     touchY = y;
   }, { passive: false });
 
-  window.addEventListener('touchend', () => { touchY = null; }, { passive: true });
-  window.addEventListener('touchcancel', () => { touchY = null; }, { passive: true });
+  /* Lifting the finger hands the remaining speed on, so a flick glides to
+     a stop instead of ending the moment contact does. The list glides on
+     its own eased scroller; the page glides through the cap, which keeps
+     the flick bounded. */
+  window.addEventListener('touchend', () => {
+    touchY = null;
+    const carry = touchV * FLING;
+    touchV = 0;
+    if (Math.abs(carry) < 4) { touchPanel = null; return; }
+
+    if (touchPanel) {
+      const max = touchPanel.scrollHeight - touchPanel.clientHeight;
+      listPanel = touchPanel;
+      listTarget = Math.max(0, Math.min(max, touchPanel.scrollTop + carry));
+      listWake(touchPanel);
+    } else {
+      const travel = document.documentElement.scrollHeight - window.innerHeight;
+      capTarget = Math.max(0, Math.min(travel, capTarget + carry));
+      capTarget = Math.max(capPos - CAP_LEAD, Math.min(capPos + CAP_LEAD, capTarget));
+      capWake();
+    }
+    touchPanel = null;
+  }, { passive: true });
+
+  window.addEventListener('touchcancel', () => { touchY = null; touchV = 0; touchPanel = null; }, { passive: true });
 
   /* ------------------------------------------------------------------
      SCROLL CAP
@@ -2331,6 +2369,8 @@
 
   const CAP_SPEED = 800;    // px per second, the fastest the page will move
   const CAP_LEAD = 700;     // px the target may run ahead of the page
+  const CAP_TAU = .28;      // how softly the page settles onto its target
+  const FLING = 210;        // ms of travel a flick carries after the finger lifts
 
   let capPos = window.scrollY;
   let capTarget = window.scrollY;
@@ -2367,7 +2407,12 @@
       return;
     }
 
-    capPos += Math.sign(diff) * Math.min(Math.abs(diff), CAP_SPEED * dt);
+    /* Ease toward the target, then clip that step to the cap. Easing alone
+       would let a big target move fast; a fixed rate alone arrives at full
+       speed and stops dead. Together the page gets up to the cap and then
+       settles into it. */
+    const eased = diff * (1 - Math.exp(-dt / CAP_TAU));
+    capPos += Math.sign(diff) * Math.min(Math.abs(eased), CAP_SPEED * dt);
     window.scrollTo(0, capPos);
     requestAnimationFrame(capFrame);
   }
