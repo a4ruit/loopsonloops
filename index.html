@@ -86,12 +86,13 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  /* While a list is on stage with somewhere left to go, the page gives up
-     its own vertical panning so the drag can be handed to that list.
-     Chrome ignores preventDefault once a native scroll has begun, so the
-     gesture has to be claimed before it starts. pinch-zoom is left alone —
-     taking that away would cost more than the effect is worth. */
-  html.holding, html.holding body { touch-action: pan-x pinch-zoom; }
+  /* Vertical panning belongs to the script, on every device. Left native,
+     a phone's fling outruns the whole sequence: the page reaches the end
+     while the eased follower is still near the top, so no panel is ever on
+     stage and none of them can take the drag. Claimed up front because
+     preventDefault is ignored once a native scroll has begun. pinch-zoom
+     is left alone — taking zoom away costs more than the effect is worth. */
+  html, body { touch-action: pan-x pinch-zoom; }
 
   html {
     /* the composition is fixed; this is the runway the patterns are timed
@@ -2291,13 +2292,13 @@
     if (!dy) return;
     lastDir = dy > 0 ? 1 : -1;
 
-    const panel = heldPanel();
-    if (!panel) { touchY = y; return; }
-
-    const max = panel.scrollHeight - panel.clientHeight;
-    const room = dy > 0 ? panel.scrollTop < max - 1 : panel.scrollTop > 1;
-
+    // the page is metered on touch exactly as it is on the wheel
     e.preventDefault();
+
+    const panel = heldPanel();
+    const max = panel ? panel.scrollHeight - panel.clientHeight : 0;
+    const room = panel && (dy > 0 ? panel.scrollTop < max - 1 : panel.scrollTop > 1);
+
     if (room) {
       // one to one with the finger: anything eased would feel detached
       panel.scrollTop = Math.max(0, Math.min(max, panel.scrollTop + dy));
