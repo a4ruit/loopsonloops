@@ -3,54 +3,243 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Loops on Loops</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bitcount+Single:wght@400;700&display=swap" rel="stylesheet" />
+<title>Infinite Echoes Symposium</title>
+<link rel="stylesheet" href="https://use.typekit.net/ytk2qjy.css">
 <style>
-  @font-face {
-    font-family: 'VCR OSD Mono';
-    src: url('fonts/VCR_OSD_MONO_1.001.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: block;
-  }
+  /* ------------------------------------------------------------------
+     Synthese is served from the Adobe Fonts kit linked in the head, which
+     provides weights 400 and 700 (roman and italic). There is no Light,
+     so 400 is the running weight and 700 carries every emphasis.
+     ------------------------------------------------------------------ */
 
   :root {
-    --blush: #FEDFDF;
-    --ink: #1c1a1a;
+    /* core — background, negative space, type, logos, content */
+    --ink: #1a1a1a;
+    --paper: #ffffff;
+
+    /* accents — assets, highlights, highlight type, graphic elements */
+    --lime: #e4fb6f;     /* highlight on light ground */
+    --green: #36d469;    /* the same role on dark ground */
+    --violet: #7328fa;
+
+    --ui: 13px;          /* one size for nav, panels and the lockup */
+    --track: .035em;     /* one tracking for running text */
+    --type: "synthese", ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+
+    /* grid resolution — everything in BLOCKS is addressed against these */
+    --cols: 24;
+    --rows: 14;
+
+    /* progressive blur: sharp above --blur-start, fully soft by --blur-end */
+    --blur-start: 48%;
+    --blur-end: 100%;
+    --blur-max: 22px;
+    --blur-span: calc(var(--blur-end) - var(--blur-start));
+
+    /* hero placement, in grid cells */
+    --hero-col: 2;
+    --hero-row: 6;
+    --hero-w: 14;
+    --hero-h: 3;
+    --hero-size: clamp(2rem, 6.5vmin, 4.75rem);
+    --hero-weight: 400;     /* 400 Regular · 700 Bold */
+    --hero-align: center;   /* start | center | end, within its rows */
+
+    /* where the panels sit, in grid cells */
+    --panel-col: 10;
+    --panel-row: 3;
+    --panel-w: 13;   /* four location columns need the room */
+    --panel-h: 9;   /* rows 3–11, so its centre lands on the hero's */
+    --statement-shift: 2;   /* columns the tagline sits in from the stage edge */
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  html, body {
-    height: 100%;
-    overflow: hidden;
+  html {
+    /* the composition is fixed; this is the runway the patterns are timed
+       against. --scroll-len is how far the page travels, in viewports. */
+    --scroll-len: 400vh;
+    scroll-behavior: auto;
   }
 
   body {
-    background: linear-gradient(180deg, var(--blush) 0%, #fff 100%);
-    display: grid;
-    place-items: center;
-    font-family: 'Bitcount Single', 'VCR OSD Mono', ui-monospace, monospace;
-    font-weight: 400;
+    min-height: 100%;
+    overflow-x: hidden;
   }
 
-  /* hairline frame flush to the viewport edge */
-  body::after {
-    content: '';
+  .runway {
+    height: var(--scroll-len);
+    pointer-events: none;
+  }
+
+  body {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--type);
+    font-weight: 400;
+    letter-spacing: var(--track);
+  }
+
+  /* grid ------------------------------------------------------------
+     The substrate. Cells are addressed by column/row so blocks can be
+     placed, resized and recoloured from the BLOCKS list in the script,
+     without touching layout. Press G to see the guides while sculpting. */
+
+  .grid {
     position: fixed;
     inset: 0;
-    border: 25px solid #fff;
-    pointer-events: none;
-    z-index: 2;
+    z-index: 0;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-rows: repeat(var(--rows), 1fr);
   }
 
-  /* header block sitting just inside the frame */
+  .grid.guides {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, .07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, .07) 1px, transparent 1px);
+    background-size: calc(100% / var(--cols)) calc(100% / var(--rows));
+  }
+
+  /* finer guides inside a subdivided region */
+  .grid.guides .subgrid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, .05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, .05) 1px, transparent 1px);
+    background-size: calc(100% / var(--sc)) calc(100% / var(--sr));
+  }
+
+  /* a region of the grid subdivided into finer cells, for pixel-scale
+     stepping along an edge. The container occupies whole cells of the
+     parent grid; its own children are addressed in the finer units. */
+  .subgrid {
+    display: grid;
+    grid-template-columns: repeat(var(--sc), 1fr);
+    grid-template-rows: repeat(var(--sr), 1fr);
+  }
+
+  .block { background: var(--green); }
+  .block.violet { background: var(--violet); }
+  .block.lime   { background: var(--lime); }
+  .block.paper  { background: var(--paper); }
+
+  /* pattern strips ---------------------------------------------------
+     Laid on the same grid as the blocks and timed against scroll: each
+     one fades up, holds, and fades out again over its own window. They
+     sit below the veil, so they blur toward the bottom and the cursor
+     lens resolves them. */
+
+  .patterns {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-rows: repeat(var(--rows), 1fr);
+    pointer-events: none;
+  }
+
+  .patterns .item {
+    grid-column: var(--c) / span var(--w);
+    grid-row: var(--r) / span var(--h);
+    position: relative;
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+
+  /* strips are wide artwork stood on end: the image is sized along its own
+     long axis to the height of its cells, then rotated a quarter turn */
+  .patterns .strip img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--len);
+    height: auto;
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+
+  .patterns .symbol img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* progressive blur -------------------------------------------------
+     Sharp at the top, blurring toward the bottom. A single blurred layer
+     with a gradient mask gives a hard edge where the mask bites, so this
+     stacks five layers: each one blurs twice as hard as the last and fades
+     in slightly lower, which reads as one continuous ramp.
+
+     Controls, all on :root —
+       --blur-start  where the blur begins (0% top … 100% bottom)
+       --blur-end    where it reaches full strength
+       --blur-max    the strongest blur radius, at the very bottom          */
+
+  .veil {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* only covers the region that is actually blurred. A full-viewport
+       backdrop-filter re-samples the whole page on every frame that
+       anything moves, which is most of where the cost was. */
+    top: var(--blur-start);
+    z-index: 2;
+    pointer-events: none;
+
+    /* The lens: a soft hole punched OUT of every blur layer's mask, so
+       whatever sits under the cursor loses its blur and resolves into
+       focus. Position and radius are driven from the script; --lens-y is
+       relative to this element, not the page. */
+    --lens: radial-gradient(
+      circle var(--lens-r, 0px) at var(--lens-x, -999px) var(--lens-y, -999px),
+      #000 0%,
+      rgba(0, 0, 0, .72) 45%,
+      transparent 100%);
+  }
+
+  .veil i {
+    position: absolute;
+    inset: 0;
+    display: block;
+    /* layer one is the vertical ramp, layer two is the lens; subtracting
+       leaves blur where the ramp says yes AND the lens says no */
+    mask-composite: subtract;
+  }
+
+  /* three layers rather than five: each stacked backdrop-filter is a
+     separate full-region blur pass, and three is enough to read as a
+     smooth ramp rather than a stepped one */
+  .veil i:nth-child(1) {
+    backdrop-filter: blur(calc(var(--blur-max) * .16));
+    -webkit-backdrop-filter: blur(calc(var(--blur-max) * .16));
+    mask-image:
+      linear-gradient(to bottom, transparent 0%, #000 34%),
+      var(--lens);
+  }
+
+  .veil i:nth-child(2) {
+    backdrop-filter: blur(calc(var(--blur-max) * .44));
+    -webkit-backdrop-filter: blur(calc(var(--blur-max) * .44));
+    mask-image:
+      linear-gradient(to bottom, transparent 26%, #000 66%),
+      var(--lens);
+  }
+
+  .veil i:nth-child(3) {
+    backdrop-filter: blur(var(--blur-max));
+    -webkit-backdrop-filter: blur(var(--blur-max));
+    mask-image:
+      linear-gradient(to bottom, transparent 58%, #000 var(--blur-end)),
+      var(--lens);
+  }
+
+  /* header ---------------------------------------------------------- */
+
   .header {
     position: fixed;
-    top: 25px;
-    left: 25px;
+    top: 0;
+    left: 0;
     z-index: 4;
     width: min(620px, 82vw);
   }
@@ -59,20 +248,9 @@
     display: flex;
     align-items: center;
     gap: 1.75rem;
-    /* same breathing room above the pills as to their left */
     padding: 2rem 0 0 2rem;
-    font-size: 15px;
-    letter-spacing: .06em;
-  }
-
-  /* a white spotlight that fades out into whatever the element's own colour is.
-     the gradient layer sits on top of the element's background colour, so each
-     element supplies its own falloff colour without it being hard-coded here. */
-  .spot {
-    background-image: radial-gradient(
-      circle var(--spot-r, 120px) at var(--spot-x, -999px) var(--spot-y, -999px),
-      rgba(255, 255, 255, var(--spot-a, 0)) 0%,
-      rgba(255, 255, 255, 0) 100%);
+    font-size: var(--ui);
+    letter-spacing: var(--track);
   }
 
   .nav a {
@@ -80,117 +258,552 @@
     align-items: center;
     height: 2.4rem;
     padding: 0 1.5rem;
-    border: 1px solid var(--ink);
+    border: 1px solid rgba(255, 255, 255, .72);
     border-radius: 999px;
-    background-color: var(--ink);
-    --spot-r: 90px;
-    color: #fff;
-    font-weight: 400;
+    /* translucent fill plus a backdrop blur: what sits behind the pill is
+       softened, while the label itself is painted on top and stays sharp */
+    background-color: rgba(255, 255, 255, .60);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: var(--ink);
     text-decoration: none;
     white-space: nowrap;
     cursor: pointer;
-    transition: background .3s ease, color .3s ease;
+    transition: background-color .3s ease, color .3s ease;
   }
 
-  /* the open item inverts, so the row keeps its shape while the word
-     reappears as the tray's title */
-  .nav a.active {
+  .nav a:hover {
+    background-color: rgba(115, 40, 250, .72);
+    border-color: rgba(115, 40, 250, .9);
+    color: var(--paper);
+  }
+
+  /* the open item inverts, so the row keeps its shape and the pill
+     marks which panel is on the stage */
+  .nav a.active,
+  .nav a.active:hover {
     background-color: transparent;
-    background-image: none;
-    color: var(--ink);
+    border-color: var(--paper);
+    color: var(--paper);
   }
 
-  /* white tray dropping out from under the header */
-  .tray {
-    height: 0;
-    overflow: hidden;
-    margin-top: .5rem;
-    background: #fff;
-    color: var(--ink);
-    border-radius: 26px;
-    transition: height .55s cubic-bezier(.16,1,.3,1);
+  /* the stage: panels land in the right two thirds of the page, one at a
+     time, cross-fading between each other rather than dropping down */
+  /* the stage is a region of the grid, addressed in cells like everything
+     else, so the panels sit inside the composition rather than against
+     the edge of the window */
+  .stage {
+    position: fixed;
+    left: calc(100vw * (var(--panel-col) - 1) / var(--cols));
+    top: calc(100vh * (var(--panel-row) - 1) / var(--rows));
+    width: calc(100vw * var(--panel-w) / var(--cols));
+    height: calc(100vh * var(--panel-h) / var(--rows));
+    z-index: 4;
+    pointer-events: none;
   }
 
-  /* no heading inside the tray: the open pill above is the heading */
-  .panels { padding: 2rem 2rem 2.25rem; }
+  /* progress markers ------------------------------------------------
+     One shape per entry, cycling through the six symbols. The PNGs are
+     solid colour on transparency, so they are used as masks rather than
+     images — that way the palette drives the colour and the marker can
+     report status: faint for what is ahead, dim for what has passed, and
+     full accent for wherever the list is now. */
+  .dots {
+    position: absolute;
+    top: 0;
+    left: -1.9rem;          /* outside the panel box */
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    opacity: 0;
+    transition: opacity .4s ease;
+  }
 
-  .panel { display: none; }
-  .panel.active { display: block; }
+  /* the stage itself ignores the pointer, so the rail has to opt back in */
+  .dots.on { opacity: 1; pointer-events: auto; }
+
+  /* unreachable while the rail is hidden */
+  .dots:not(.on) { pointer-events: none; }
+
+  .dots i:hover { background: rgba(255, 255, 255, .6); }
+  .dots i.cur:hover { background: var(--green); }
+
+  .dots i {
+    display: block;
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, .2);
+    -webkit-mask: var(--shape) center / contain no-repeat;
+            mask: var(--shape) center / contain no-repeat;
+    transition: background .35s ease, transform .35s ease;
+  }
+
+  .dots i.cur {
+    background: var(--green);
+    transform: scale(1.35);
+  }
+
+  /* the opening statement, revealed a clause at a time before the panels
+     take over the stage. Light is the running weight and Regular carries
+     the emphasis — real cuts rather than a faked bold. */
+  .statement {
+    position: absolute;
+    /* nudged in from the stage's left edge, in grid columns, so the block
+       sits clear of the green mass beside it */
+    left: calc(100vw * var(--statement-shift) / var(--cols));
+    right: 0;
+    top: 50%;
+    /* block, not flex: as a flex container each clause would become a flex
+       item and sit as its own box instead of flowing as one paragraph */
+    display: block;
+    transform: translateY(-50%);
+    margin: 0;
+    font-weight: 400;
+    /* the poster sets this as a narrow block of four or five short lines,
+       not a wide two-line banner — the measure is what makes it read that
+       way, so it is capped in characters rather than left to fill */
+    max-width: 30ch;
+    font-size: clamp(1.05rem, 2.4vmin, 1.7rem);
+    line-height: 1.55;
+    letter-spacing: var(--track);
+    /* the running text sits back so the emphasis can come forward */
+    color: rgba(255, 255, 255, .72);
+    pointer-events: none;
+    transition: opacity .45s ease;
+  }
+
+  /* Synthese ships here as Light and Regular only, so the emphasis is
+     carried by weight AND the brand highlight colour rather than by a
+     synthetic bold, which would just smear the outlines. */
+  /* a real Bold at last, rather than weight-plus-colour standing in for one */
+  .statement .em {
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  /* one word per span, so the sentence resolves as a continuous wipe
+     across the paragraph rather than in separate blocks */
+  .statement w {
+    display: inline-block;
+    opacity: var(--o, 0);
+    filter: blur(var(--b, 8px));
+    /* the tail of the sentence drops word by word; a transform moves the
+       glyphs without moving the line boxes, so the paragraph keeps its
+       reading order and nothing reflows */
+    transform: translateY(var(--dy, 0));
+  }
+
+  .panel {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    /* chaining is managed by the wheel handler, not by the browser: the
+       panel has to be able to hand the scroll back when it reaches its end */
+    overscroll-behavior: auto;
+    padding: 1.5rem 1.6rem;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 0;
+    background: rgba(26, 26, 26, .62);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity .42s ease, transform .42s cubic-bezier(.16,1,.3,1), visibility 0s linear .42s;
+  }
+
+  /* the page's own column lines carried through the panel, so a centred
+     list still reads against the grid. The pitch is one grid column and
+     the origin is the border box, which sits on a column boundary, so the
+     rules line up with the grid behind the panel rather than near it. */
+  /* each entry is its own band: a rule runs the full width of the panel
+     under every name, sectioning the list horizontally */
+  /* the rules do the spacing now: identical padding above and below each
+     entry, and no margin, so every band is the same height around its
+     contents and the name sits centred between its two lines */
+  .panel.ruled li {
+    margin: 0;
+    padding: 1.75rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .16);
+    /* driven per frame as the list scrolls */
+    opacity: var(--o, 1);
+    filter: blur(var(--b, 0px));
+  }
+
+  /* a project band carries a thumbnail as well, so it needs more room —
+     still equal top and bottom */
+  .panel.ruled .works li { padding: 2.25rem 0; }
+
+  .panel.ruled li:last-child { border-bottom: 0; }
+
+  .panel.active {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    visibility: visible;
+    transition: opacity .42s ease, transform .42s cubic-bezier(.16,1,.3,1), visibility 0s;
+  }
 
   .panel ul { list-style: none; }
 
   .panel li {
     display: flex;
-    gap: 2.5rem;
-    font-size: 14px;
-    line-height: 2.1;
-    border-top: 1px solid rgba(28, 26, 26, .12);
+    gap: 1.25rem;
+    font-size: var(--ui);
+    line-height: 1.75;
+    border-top: 1px solid rgba(255, 255, 255, .16);
     padding-top: .35rem;
   }
 
   .panel li span:first-child {
-    min-width: 8rem;
+    min-width: 3.4rem;
+    flex: none;
     opacity: .55;
   }
 
-  /* project rows: a small 16:9 still, rounded to match the tray */
-  .works li {
-    align-items: center;
-    gap: 1.25rem;
-    padding: .55rem 0;
-    line-height: 1.4;
+  
+
+  
+
+  /* schedule ---------------------------------------------------------
+     Columns are locations, Kaleide first. Every card is placed on a shared
+     time axis of 15-minute rows, so an empty stretch in a column genuinely
+     means that room is dark — breaks and keynotes read as white space
+     rather than needing a label. */
+
+  /* Column rules run behind the whole schedule, headings included, so the
+     venue names and the cards below them read off the same lines. The
+     grids carry no column gap — that way a boundary falls exactly on a
+     quarter of the width and the rule lands on it; the breathing room
+     comes from the cards' own margins instead. */
+  .sched {
+    position: relative;
+    padding-left: 1px;
+    padding-top: 1.1rem;
   }
 
+  .sched::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, .14) 1px, transparent 1px);
+    background-size: 25% 100%;
+  }
+
+  .locs-head,
+  .locs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    column-gap: 0;
+    row-gap: .35rem;
+  }
+
+  .locs-head {
+    padding-bottom: .5rem;
+    margin-bottom: .5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, .14);
+    font-size: clamp(.85rem, 1.6vmin, 1.15rem);
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    opacity: .85;
+  }
+
+  .locs-head span { padding-left: .5rem; }
+
+  .gap { padding-left: .5rem; }
+
+  /* 2:30 to 7:30 in quarter hours */
+  .locs { grid-template-rows: repeat(20, minmax(15px, auto)); }
+
+  .card {
+    /* inset from the column rules on either side */
+    margin: 0 .4rem 0 .5rem;
+    background: var(--paper);
+    color: var(--ink);
+    /* no padding on the card itself: the bar runs corner to corner and
+       only the body text is inset */
+    padding: 0;
+    overflow: hidden;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.3;
+
+    --cat: var(--violet);
+    --cat-ink: var(--paper);
+  }
+
+  .card.keynote  { --cat: #1a1a1a; }
+  .card.demo     { --cat: #c2185b; }
+  .card.showcase { --cat: #2fa85a; }
+  .card.social   { --cat: #5a5a5a; }
+
+  /* one bar across the top of every card: grey under the time, easing
+     across into that session type's colour under the tag */
+  .card .top {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: .35rem;
+    background: rgba(26, 26, 26, .14);
+  }
+
+  .card .time {
+    padding: .28rem .4rem;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: var(--track);
+    white-space: nowrap;
+  }
+
+  .card .tag {
+    display: flex;
+    align-items: center;
+    padding: .28rem .45rem;
+    background: var(--cat);
+    color: var(--cat-ink);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .card .body { padding: .35rem .4rem .45rem; }
+
+  /* breaks are the empty rows; this just names them, sitting in the gap
+     rather than filling it with another card */
+  .gap {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: 9px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    opacity: .45;
+  }
+
+  .gap i {
+    flex: 1;
+    height: 1px;
+    background: currentColor;
+    opacity: .5;
+  }
+
+  .card .who { letter-spacing: var(--track); }
+  .card .dot { opacity: .45; }
+  .card .what { color: var(--violet); }
+
+  /* speakers ---------------------------------------------------------
+     A centred list; the discipline rides as a small superscript off the
+     name, the way a ™ sits off a wordmark. */
+  .speakers {
+    text-align: center;
+    padding: 1.25rem 0 1.5rem;
+  }
+
+  .speakers li {
+    display: block;
+    border: 0;
+    padding: 0;
+    margin: 0 0 2.2rem;
+    font-size: clamp(1.15rem, 2.6vmin, 1.95rem);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: var(--track);
+  }
+
+  .speakers li:last-child { margin-bottom: 0; }
+
+
+  .works .by {
+    display: block;
+    margin-top: .4rem;
+    font-size: .58em;
+    opacity: .55;
+  }
+
+  /* the sheet's representative images live behind RMIT sign-in, so each
+     work holds an empty frame until they are exported into media/works/ */
+  .works .frame,
   .works .thumb {
-    width: 104px;
+    display: block;
+    width: 200px;
+    max-width: 70%;
     aspect-ratio: 16 / 9;
     object-fit: cover;
-    display: block;
-    border: 1px solid rgba(28, 26, 26, .22);
-    border-radius: 10px;
+    margin: .9rem auto 0;
+    border: 1px solid rgba(255, 255, 255, .22);
   }
 
-  /* hero title */
-  .backdrop {
+  .works .frame { background: rgba(255, 255, 255, .04); }
+
+  .speakers sup {
+    font-size: .4em;
+    vertical-align: super;
+    letter-spacing: .06em;
+    opacity: .6;
+  }
+
+  /* credits ----------------------------------------------------------
+     The last stop on the scroll, set as one centred column like the
+     speaker and project lists, and long enough to scroll through. */
+  .credits {
+    text-align: center;
+    padding-top: 1.6rem;
+  }
+
+  .cgroup { margin-bottom: 2.75rem; }
+
+  .cgroup h4 {
+    margin-bottom: 1.4rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, .16);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+
+  .crole {
+    margin-bottom: 1.35rem;
+    line-height: 1.35;
+  }
+
+  .crole b {
+    display: block;
+    font-size: clamp(.85rem, 1.5vmin, 1.05rem);
+    font-weight: 700;
+  }
+
+  .crole span {
+    display: block;
+    margin-top: .2rem;
+    font-size: clamp(.8rem, 1.35vmin, .95rem);
+    opacity: .6;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .5rem;
+  }
+
+  .gallery img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, .22);
+  }
+
+  /* hero ------------------------------------------------------------ */
+
+  /* hero -------------------------------------------------------------
+     Laid onto the same grid as the blocks, so the title is addressed in
+     cells like everything else. Move or resize it entirely from the
+     --hero-* variables on :root.                                        */
+
+  .hero {
     position: fixed;
     inset: 0;
     z-index: 3;
     display: grid;
-    place-content: center;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-rows: repeat(var(--rows), 1fr);
     pointer-events: none;
     user-select: none;
-    color: var(--ink);
-    font-family: 'Bitcount Single', 'VCR OSD Mono', monospace;
-    font-weight: 700;
-    font-size: clamp(3rem, 11vmin, 8.5rem);
-    line-height: .95;
-    letter-spacing: .02em;
-    white-space: nowrap;
   }
 
-  /* each line is its own hover target */
-  .backdrop span {
+  .hero h1 {
+    grid-column: var(--hero-col) / span var(--hero-w);
+    grid-row: var(--hero-row) / span var(--hero-h);
+    align-self: var(--hero-align);
+    font-size: var(--hero-size);
+    font-weight: var(--hero-weight);
+    line-height: 1.04;
+    letter-spacing: var(--track);
+  }
+
+  /* two lines: "Visible /" over "Invisible 2026" */
+  .hero h1 span { display: block; }
+
+  /* the word "Invisible" is held just out of focus, and the cursor lens
+     resolves it — the title performs its own premise */
+  .veiled { font-style: normal; }
+
+  .veiled b {
+    display: inline-block;
+    font-weight: inherit;
+    filter: blur(var(--b, 7px));
+    opacity: var(--o, 1);
+  }
+
+  /* event information, top right ------------------------------------
+     The offset lands its first line on the same optical line as the pill
+     labels opposite: 2rem to the nav row, then half the difference
+     between the pill height and a line of type. */
+  .eventinfo {
+    position: fixed;
+    top: calc(2rem + .6rem);
+    right: 2rem;
+    z-index: 4;
+    text-align: right;
+    font-size: var(--ui);
+    font-weight: 400;
+    line-height: 1.45;
+    letter-spacing: var(--track);
+    pointer-events: none;
+  }
+
+  .eventinfo span { display: block; }
+  .eventinfo .date { font-weight: 700; color: var(--green); }
+  .eventinfo .place { opacity: .7; }
+
+  /* IES mark, bottom left --------------------------------------------
+     the supplied file is a white mark on a solid ink square, so it reads
+     as a block on the page rather than a knocked-out logo */
+  .brand {
+    position: fixed;
+    left: 2rem;
+    bottom: 2rem;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+  }
+
+  /* the file carries a wide margin inside its square, so the box is set
+     larger than the mark reads — this lands the glyph at about the height
+     of the two lines beside it */
+  .brand img {
     display: block;
-    width: fit-content;
-    pointer-events: auto;
-    opacity: .82;
-    transition: opacity .45s ease;
-    /* the glyphs themselves are the lit surface, so the spotlight is clipped
-       to the text: ink where it is dark, white under the cursor */
-    background-color: var(--ink);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    --spot-r: 300px;
+    width: 58px;
+    height: 58px;
+    margin-left: -.5rem;
   }
 
-  .backdrop span:hover { opacity: 1; }
+  .brand .wordmark {
+    font-size: var(--ui);
+    line-height: 1.32;
+    letter-spacing: var(--track);
+  }
 
-  /* institutional marks, bottom right, inset to match the header */
+  .brand .wordmark span { display: block; }
+
+  /* institutional marks --------------------------------------------- */
+
   .marks {
     position: fixed;
-    right: calc(25px + 2rem);
-    bottom: calc(25px + 2rem);
+    right: 2rem;
+    bottom: 2rem;
     z-index: 4;
     display: flex;
     align-items: center;
@@ -201,129 +814,254 @@
 
   .marks img { display: block; }
 
-  /* supplied as white artwork on transparent, so it is flipped to black here */
-  .marks .magi {
-    height: 20px;
+  /* already white artwork, which is what the dark ground wants */
+  .marks .magi { height: 20px; }
+
+  /* supplied as black artwork, so it is knocked out to white here */
+  .marks .rmit {
+    height: 30px;
     filter: invert(1);
   }
 
-  .marks .rmit { height: 30px; }
-
-  /* hairline divider between the two marks */
   .marks .rule {
     width: 1px;
     height: 26px;
-    background: var(--ink);
+    background: var(--paper);
     opacity: .35;
   }
-
-  /* ---- marquee bands ---- */
-  .bands {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    overflow: hidden;
-  }
-
-  /* every band spans the full viewport so its path can travel corner to corner */
-  .band,
-  .charms {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-    pointer-events: none;
-    /* own compositor layer: a moving band then repaints only itself, never the
-       gradient, the hero or its neighbours */
-    transform: translateZ(0);
-    backface-visibility: hidden;
-  }
-
-  .charms path {
-    fill: none;
-    stroke: var(--ink);
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: .17;
-  }
-
-  .band text {
-    fill: var(--ink);
-    font-family: 'Bitcount Single', 'VCR OSD Mono', monospace;
-    font-weight: 400;
-    opacity: .3;
-    pointer-events: auto;
-    cursor: crosshair;
-    transition: opacity .5s ease;
-    /* stop each glyph snapping to the pixel grid as it slides along the path */
-    text-rendering: geometricPrecision;
-    shape-rendering: geometricPrecision;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  .band text:hover { opacity: .85; }
-
-  /* the two supporting bands sit further back */
-  .band-a text { opacity: .45; }
-  .band-b text,
-  .band-c text { opacity: .18; }
 </style>
 </head>
 <body>
 
+<div class="grid guides" id="grid" aria-hidden="true"></div>
+
 <div class="header" id="header">
   <nav class="nav">
-    <a class="spot" data-panel="schedule">SCHEDULE</a>
-    <a class="spot" data-panel="artists">ARTISTS</a>
-    <a class="spot" data-panel="projects">PROJECTS</a>
+    <a data-panel="schedule">Schedule</a>
+    <a data-panel="speakers">Speakers</a>
+    <a data-panel="projects">Projects</a>
+    <a data-panel="gallery">Gallery</a>
   </nav>
 
-  <div class="tray" id="tray">
-    <div class="panels">
+</div>
+
+<div class="stage" id="stage">
+      <div class="dots" id="dots" aria-hidden="true"></div>
+      <p class="statement" id="statement"><span class="em">Visible / Invisible </span><span>is an interdisciplinary symposium exploring how </span><span class="em">animation, games &amp; interactive </span><span>practices reveal experiences, systems and meanings that remain hidden.</span></p>
+
       <section class="panel" data-panel="schedule">
-        <ul>
-          <li><span>10:00</span><span>Opening remarks</span></li>
-          <li><span>11:00</span><span>Keynote — practice as research</span></li>
-          <li><span>13:30</span><span>Panel — loops, systems, feedback</span></li>
-          <li><span>15:00</span><span>Studio walkthroughs</span></li>
-          <li><span>17:00</span><span>Screening + close</span></li>
+        <div class="sched">
+        <div class="locs-head">
+          <span>Kaleide Theatre</span><span>MegaFlex 1</span><span>MegaFlex 2</span><span>MegaFlex 3</span>
+        </div>
+
+        <div class="locs">
+          <div class="gap" style="grid-row: 4 / span 1;"><span>3:15 Break</span><i></i></div>
+          <div class="gap" style="grid-row: 11 / span 1;"><span>5:00 Break</span><i></i></div>
+
+          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 1 / span 3;">
+            <div class="top"><span class="time">2:30 – 3:15</span><span class="tag">Keynote</span></div>
+            <div class="body"><span class="who">Opening address</span></div>
+          </div>
+          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 12 / span 3;">
+            <div class="top"><span class="time">5:15 – 6:00</span><span class="tag">Keynote</span></div>
+            <div class="body"><span class="who">Closing remarks</span> <span class="dot">&#9679;</span> <span class="what">Talks continue after</span></div>
+          </div>
+          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 20 / span 1;">
+            <div class="top"><span class="time">7:15 – 7:30</span><span class="tag">Close</span></div>
+            <div class="body"><span class="who">Thanks for coming</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 5 / span 2;">
+            <div class="top"><span class="time">3:30 – 4:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student A</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 7 / span 2;">
+            <div class="top"><span class="time">4:00 – 4:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student B</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 9 / span 2;">
+            <div class="top"><span class="time">4:30 – 5:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student C</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 15 / span 2;">
+            <div class="top"><span class="time">6:00 – 6:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student G</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 17 / span 2;">
+            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student H</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 19 / span 1;">
+            <div class="top"><span class="time">7:00 – 7:15</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student I</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 5 / span 2;">
+            <div class="top"><span class="time">3:30 – 4:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student D</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 7 / span 2;">
+            <div class="top"><span class="time">4:00 – 4:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student E</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 9 / span 2;">
+            <div class="top"><span class="time">4:30 – 5:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student F</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 15 / span 2;">
+            <div class="top"><span class="time">6:00 – 6:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student J</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 17 / span 2;">
+            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student K</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 19 / span 1;">
+            <div class="top"><span class="time">7:00 – 7:15</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="who">Student L</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          </div>
+          <div class="card showcase" style="grid-column: 4 / span 1; grid-row: 9 / span 6;">
+            <div class="top"><span class="time">4:30 – 6:00</span><span class="tag">Showcase</span></div>
+            <div class="body"><span class="who">Animation &amp; video essays</span> <span class="dot">&#9679;</span> <span class="what">On loop, drop in</span></div>
+          </div>
+          <div class="card demo" style="grid-column: 4 / span 1; grid-row: 15 / span 5;">
+            <div class="top"><span class="time">6:00 – 7:15</span><span class="tag">Live demo</span></div>
+            <div class="body"><span class="who">Playtest floor</span> <span class="dot">&#9679;</span> <span class="what">Games, open play</span></div>
+          </div>
+          <div class="card social" style="grid-column: 2 / span 2; grid-row: 12 / span 3;">
+            <div class="top"><span class="time">5:15 – 6:00</span><span class="tag">Networking</span></div>
+            <div class="body"><span class="who">Mingle space</span> <span class="dot">&#9679;</span> <span class="what">MegaFlex 1 &amp; 2</span></div>
+          </div>
+        </div>
+        </div>
+      </section>
+
+      <section class="panel ruled" data-panel="speakers">
+        <ul class="speakers">
+          <li>Ching-Yi Hsu <sup>(Kaleide video)</sup></li>
+          <li>Caitlin Butt <sup>(Speaking)</sup></li>
+          <li>Yuchi Huang <sup>(Speaking + live demo)</sup></li>
+          <li>Nathalynn Dhamabutra <sup>(Speaking)</sup></li>
+          <li>Jit Thong Ng <sup>(Live demo)</sup></li>
+          <li>Clarissa Dias <sup>(Speaking)</sup></li>
+          <li>Sofia Moshkina <sup>(Speaking)</sup></li>
+          <li>Esthefania Morantes Simanca <sup>(Speaking)</sup></li>
+          <li>Yuna Jang <sup>(Live demo)</sup></li>
+          <li>Alex Wang <sup>(Speaking)</sup></li>
+          <li>Pita Khanngern <sup>(Live demo)</sup></li>
+          <li>Patricia Wijaya <sup>(Kaleide video)</sup></li>
+          <li>Otis Nguyen <sup>(Speaking)</sup></li>
+          <li>Holly Nahrung <sup>(Kaleide video)</sup></li>
+          <li>Jahanvi <sup>(Live demo)</sup></li>
+          <li>Sunny (Shengyang Zhang) <sup>(Speaking)</sup></li>
+          <li>Sarah Cohen <sup>(Speaking)</sup></li>
+          <li>Isabella Mesiti <sup>(Speaking)</sup></li>
         </ul>
       </section>
 
-      <section class="panel" data-panel="artists">
-        <ul>
-          <li><span>01</span><span>Mira Kowalczyk — moving image</span></li>
-          <li><span>02</span><span>Teo Alvarez — sound &amp; installation</span></li>
-          <li><span>03</span><span>Nadia Okonkwo — generative print</span></li>
-          <li><span>04</span><span>Rue Hasegawa — animation</span></li>
-          <li><span>05</span><span>Sam Delacroix — sculpture, video</span></li>
-          <li><span>06</span><span>Imogen Fairweather — performance</span></li>
+      <section class="panel ruled" data-panel="projects">
+        <ul class="speakers works">
+          <li>Cumulative Interaction: Exploring Slow Technology, Embodied Interaction, and Temporal Persistence in Interactive Installation <sup>(3D / Interactive)</sup><span class="by">Ching-Yi Hsu</span><span class="frame"></span></li>
+          <li>Playing in the Garden: an interdisciplinary approach to socio-ecological place making <sup>(3D / Interactive)</sup><span class="by">Caitlin Butt</span><span class="frame"></span></li>
+          <li>Between Steps <sup>(3D / Interactive)</sup><span class="by">Yuchi Huang</span><span class="frame"></span></li>
+          <li>Re-Worlding &mdash; Re-Design, Re-Build <sup>(3D / Interactive)</sup><span class="by">Nathalynn Dhamabutra</span><span class="frame"></span></li>
+          <li>Symbolic Play through the Integration of Projection Mapping, Miniature Environments and Tactile Interaction <sup>(3D / Interactive)</sup><span class="by">Jit Thong Ng</span><span class="frame"></span></li>
+          <li>Symbolic Animated Documentary as a Method for Articulating Underrepresented Emotional Experience <sup>(Animation)</sup><span class="by">Clarissa Dias</span><span class="frame"></span></li>
+          <li>Cultural Heritage in Animation: Handcrafted Practices as a Design Methodology <sup>(Animation)</sup><span class="by">Sofia Moshkina</span><span class="frame"></span></li>
+          <li>Making Non-Serious Autobiographical Narrative Games: Procedural Rhetoric, Visual Metaphor and Humour <sup>(Games)</sup><span class="by">Esthefania Morantes Simanca</span><span class="frame"></span></li>
+          <li>To &lsquo;Play&rsquo; the Music of a Game: An Innovative Approach to Music-Based Gameplay <sup>(Games)</sup><span class="by">Yuna Jang</span><span class="frame"></span></li>
+          <li>Reading as Gameplay: Distributed Game Documents, Interpretation and World Discovery <sup>(Games)</sup><span class="by">Alex Wang</span><span class="frame"></span></li>
+          <li>Games as Sites of Player Alterbiography <sup>(Games)</sup><span class="by">Pita Khanngern</span><span class="frame"></span></li>
+          <li>Environment as an Emotional Character: Animated Mindscape Visualizing Guilt <sup>(Animation)</sup><span class="by">Patricia Wijaya</span><span class="frame"></span></li>
+          <li>To Watch, To Choose, To Connect: An Interactive Approach to Shared Cinematic Experiences <sup>(Animation)</sup><span class="by">Otis Nguyen</span><span class="frame"></span></li>
+          <li>Hybrid Animation and How It Can Change a Narrative <sup>(Animation)</sup><span class="by">Holly Nahrung</span><span class="frame"></span></li>
+          <li>Sleep Paralysis in VR: Gaze, Breath and Constraint in a Sleeper-Bus Environment <sup>(3D / Interactive)</sup><span class="by">Jahanvi</span><span class="frame"></span></li>
+          <li>Voice-Based Indirect Control and Character Autonomy in Horror Games <sup>(Games)</sup><span class="by">Sunny (Shengyang Zhang)</span><span class="frame"></span></li>
+          <li>Fostering Passion for Our Environment through the Combination of Art and Science <sup>(Animation)</sup><span class="by">Sarah Cohen</span><span class="frame"></span></li>
         </ul>
       </section>
 
-      <section class="panel" data-panel="projects">
-        <ul class="works">
-          <li>
-            <img class="thumb" src="media/samplemedia/s3588979-days-days.webp" alt="" loading="lazy" />
-            <span>Days, Days</span>
-          </li>
-          <li>
-            <img class="thumb" src="media/samplemedia/s3634079-remnants-of-our-days.webp" alt="" loading="lazy" />
-            <span>Remnants of Our Days</span>
-          </li>
-          <li>
-            <img class="thumb" src="media/samplemedia/s4017090-love-in-the-form-of-an-egg.webp" alt="" loading="lazy" />
-            <span>Love in the Form of an Egg</span>
-          </li>
-          <li>
-            <img class="thumb" src="media/samplemedia/s4148098-hidden-joy.webp" alt="" loading="lazy" />
-            <span>Hidden Joy</span>
-          </li>
-        </ul>
+      <section class="panel" data-panel="gallery">
+        <div class="gallery">
+          <img src="media/samplemedia/S4125361-bunny-flip.webp" alt="" loading="lazy" />
+          <img src="media/samplemedia/S4160839-heyyou.webp" alt="" loading="lazy" />
+          <img src="media/samplemedia/S4183453-state-of-mind.webp" alt="" loading="lazy" />
+          <img src="media/samplemedia/S3902619-planet-body.webp" alt="" loading="lazy" />
+          <img src="media/samplemedia/4178055-saros.webp" alt="" loading="lazy" />
+          <img src="media/samplemedia/s3836345-bleaching.webp" alt="" loading="lazy" />
+          <img src="media/samplemedia/s3836345-no-glisten.webp" alt="" loading="lazy" />
+          <img src="media/samplemedia/s4174970-notrealpizza.webp" alt="" loading="lazy" />
+          <img src="media/samplemedia/s4148098-a-late-bloomer.webp" alt="" loading="lazy" />
+        </div>
       </section>
-    </div>
+
+      <section class="panel credits" data-panel="credits">
+        <div class="cgroup">
+          <h4>Marketing &amp; Industry Outreach</h4>
+          <p class="crole"><b>Marketing Lead</b><span>Trang Hoang Phuong</span></p>
+          <p class="crole"><b>Brand &amp; Graphic Design Lead</b><span>Son Tran Thai</span></p>
+          <p class="crole"><b>Graphic Designers (Social Media / Content)</b><span>Clarissa Lucita Dias, Yishan Ma, An Ngo, Han Ming Voon, Jing Yan</span></p>
+          <p class="crole"><b>Print Designers (Poster, Catalogue)</b><span>Son Tran Thai, Clarissa Lucita Dias, Bingying Wang, Quy Luong Le Uyen, Yishan Ma, Minkai Chen</span></p>
+          <p class="crole"><b>Social Media Coordinator</b><span>Holly Lamprey, Han Ming Voon, Ryanaldo Frenico Putra</span></p>
+          <p class="crole"><b>Social Media Video Creator</b><span>Thisuka Marasinghe, Kim Ngan Pham, Han Ming Voon, Heqing Shang, Jing Yan, Shoukang Chen</span></p>
+          <p class="crole"><b>Industry Outreach Coordinator</b><span>Heqing Shang, Trang Hoang Phuong, Rongzhen Wan</span></p>
+          <p class="crole"><b>Copywriter &amp; Press Release Manager</b><span>Trang Hoang Phuong, Holly Lamprey, Rongzhen Wan</span></p>
+        </div>
+        <div class="cgroup">
+          <h4>Venue, Production &amp; Technology</h4>
+          <p class="crole"><b>Production Design Lead</b><span>Shijie Gui, Kaihong, Yunpeng Qi</span></p>
+          <p class="crole"><b>Spatial Designer</b><span>Kaihong Wang, Shifu Zhao, Yunpeng Qi, Xinyi Chen, Yilin Liu, Xiaoqing Zhang</span></p>
+          <p class="crole"><b>Signage &amp; Wayfinding Designer</b><span>Quy Luong Le Uyen, Shifu, Yunpeng Qi, Renzi Tao, Thao Nguyen, Jade Ng</span></p>
+          <p class="crole"><b>Lead Technical Coordinator</b><span>Dineth Meehitiya</span></p>
+          <p class="crole"><b>AV &amp; Digital Experience Technician</b><span>Adrian Frichitthavong, Thisuka Marasinghe, Dineth Meehitiya</span></p>
+          <p class="crole"><b>Production Assistant</b><span>Shifu Zhao, Quy Luong Le Uyen, Yishan Ma</span></p>
+          <p class="crole"><b>Accessibility Coordinator</b><span>Candice Savira, Shifu Zhao</span></p>
+          <p class="crole"><b>Recording &amp; Archive Technician</b><span>Thisuka Marasinghe, Nguyen Nguyen Thao</span></p>
+        </div>
+        <div class="cgroup">
+          <h4>Content &amp; Documentation</h4>
+          <p class="crole"><b>Content Lead</b><span>Ryanaldo Frenico Putra</span></p>
+          <p class="crole"><b>Presenter Liaison</b><span>Candice Savira, An Ngo</span></p>
+          <p class="crole"><b>Digital Producer (Programme)</b><span>Zhefeng Wang, Sean Tovey, Jade Ng, Xiaoya Yu</span></p>
+          <p class="crole"><b>Digital Producer (Website)</b><span>Adrian Frichitthavong, Bingying Wang, Zhefeng Wang</span></p>
+          <p class="crole"><b>Copy Editor / Proofreader</b><span>Heqing Shang, Ryanaldo Frenico Putra, Sean Tovey</span></p>
+          <p class="crole"><b>Abstract Review Coordinator</b><span>Esthefania Morantes Simanca</span></p>
+          <p class="crole"><b>Feedback &amp; Evaluation Lead</b><span>Esthefania Morantes Simanca</span></p>
+          <p class="crole"><b>Photographers (Social Media &amp; On Site)</b><span>Jiawen Hu, Renzi Tao, Holly Lamprey, Shoukang Chen, William Hopper</span></p>
+          <p class="crole"><b>Videographers &amp; Editors</b><span>Jiawen Hu, Nguyen Nguyen Thao, Jing Yan, Dineth Meehitiya, Holly Lamprey, Shoukang Chen</span></p>
+        </div>
+        <div class="cgroup">
+          <h4>Project Management &amp; Logistics</h4>
+          <p class="crole"><b>Project Manager</b><span>Esthefania Morantes Simanca, William Hopper</span></p>
+          <p class="crole"><b>Schedule Coordinator</b><span>William Hopper</span></p>
+          <p class="crole"><b>Venue Liaison</b><span>Nhu</span></p>
+          <p class="crole"><b>On-site Logistics Manager</b><span>Jiawen Hu</span></p>
+          <p class="crole"><b>Inter-Committee Communications Officer</b><span>Candice Savira</span></p>
+          <p class="crole"><b>Session Chair / Moderator</b><span>Candice Savira</span></p>
+        </div>
+      </section>
+</div>
+
+<div class="eventinfo">
+  <span class="date">OCTOBER 28TH &middot; 2:30 - 7PM</span>
+  <span class="place">Kaleide Theatre &amp; Megaplex 1, 2, 3</span>
+  <span class="place">RMIT Melbourne</span>
+</div>
+
+<div class="patterns" id="patterns" aria-hidden="true"></div>
+
+<div class="veil" aria-hidden="true">
+  <i></i><i></i><i></i>
+</div>
+
+<div class="hero">
+  <h1><span>Visible /</span><span><em id="veiled" class="veiled">Invisible</em> 2026</span></h1>
+</div>
+
+<div class="brand">
+  <img src="media/logo/IES_Logo.png" alt="Infinite Echoes Symposium" />
+  <div class="wordmark">
+    <span>Infinite Echoes Symposium</span>
+    <span>of MAGI Research</span>
   </div>
 </div>
 
@@ -333,414 +1071,862 @@
   <img class="rmit" src="media/logo/rmit-logo-black.png" alt="RMIT University" />
 </div>
 
-<div class="bands" aria-hidden="true">
-
-  <!-- static layer: loop shapes scattered along the main path -->
-  <svg class="charms" id="charms" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"></svg>
-
-  <!-- main path: bottom-left to top-right, one small loop then one big loop -->
-  <svg class="band band-a" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
-    <defs>
-      <path id="wave-a" fill="none" d="
-        M -180,890
-        C 40,846 172,802 312,746
-        C 356,728 386,712 414,690
-        C 452,660 434,604 392,613
-        C 350,622 346,690 404,707
-        C 462,724 560,690 662,639
-        C 762,589 832,545 902,500
-        C 1002,436 1122,358 1132,266
-        C 1140,194 1040,176 990,239
-        C 928,316 990,438 1122,462
-        C 1232,482 1332,403 1422,319
-        C 1512,235 1602,138 1790,34" />
-    </defs>
-    <text xml:space="preserve" font-size="30" data-speed="20"><textPath href="#wave-a" startOffset="0"></textPath></text>
-  </svg>
-
-  <!-- supporting path: wide curl at the left end, then a dive to mid page -->
-  <svg class="band band-b" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
-    <defs>
-      <path id="wave-b" fill="none" d="
-        M -180,296
-        C -80,268 22,238 124,204
-        C 244,164 326,106 272,54
-        C 218,2 116,42 114,126
-        C 112,212 222,290 342,350
-        C 462,410 566,454 706,472
-        C 866,492 1004,432 1164,392
-        C 1344,347 1566,318 1790,300" />
-    </defs>
-    <text xml:space="preserve" font-size="18" data-speed="-12"><textPath href="#wave-b" startOffset="0"></textPath></text>
-  </svg>
-
-  <!-- supporting path: shallow drift across the lower half -->
-  <svg class="band band-c" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
-    <defs>
-      <path id="wave-c" fill="none" d="
-        M -180,706
-        C 150,768 342,640 562,662
-        C 782,684 902,782 1122,760
-        C 1342,738 1522,648 1790,694" />
-    </defs>
-    <text xml:space="preserve" font-size="18" data-speed="9"><textPath href="#wave-c" startOffset="0"></textPath></text>
-  </svg>
-
-</div>
-
-<div class="backdrop">
-  <span class="spot">LOOPS ON LOOPS</span>
-  <span class="spot">/26</span>
-  <span class="spot">/SYMPOSIUM</span>
-</div>
-
 <script>
-  const UNIT = 'LOOPS ON ';
+  /* ------------------------------------------------------------------
+     THE GRID
+     One entry per filled cell-block. Everything is 1-indexed against the
+     --cols / --rows set in CSS, so the whole composition is sculpted from
+     this list alone:
 
-  // --- marquee bands ---------------------------------------------------
-  const SLOW = 0.12;   // speed multiplier while hovered
-  const EASE = 0.045;  // how quickly the multiplier catches up
+       c    column to start at        (1 … cols)
+       r    row to start at           (1 … rows)
+       w    width in cells            (default 1)
+       h    height in cells           (default 1)
+       tone 'violet' | 'lime' | 'paper'   (default: green)
 
-  const bands = [...document.querySelectorAll('.band')].map(svg => {
-    const text = svg.querySelector('text');
+     Stepped shapes are made by stacking blocks of different widths on
+     consecutive rows, the way the poster's masses break down into stairs.
+     ------------------------------------------------------------------ */
+
+  const BLOCKS = [
+    // top-left mass, stepping out underneath
+    { c: 1,  r: 1,  w: 8, h: 4 },
+    { c: 1,  r: 5,  w: 5 },
+    { c: 1,  r: 6,  w: 2 },
+    { c: 3,  r: 6,  w: 1 },
+
+    // staircase climbing away to the right
+    { c: 6,  r: 5,  w: 3 },
+    { c: 9,  r: 4,  w: 2 },
+    { c: 11, r: 3,  w: 3 },
+    { c: 14, r: 2,  w: 2 },
+    { c: 16, r: 1,  w: 4, h: 2 },
+
+    // detached fragments along the top right
+    { c: 3,  r: 13, w: 2 },
+    { c: 1,  r: 11, w: 2, h: 2 },
+
+    // middle mass
+    { c: 7,  r: 8,  w: 4, h: 3 },
+    { c: 4,  r: 12, w: 2 },
+    { c: 5,  r: 10, w: 2 },
+    { c: 6,  r: 11, w: 3 },
+
+    // lower right drift
+    { c: 17, r: 11, w: 4, h: 2 },
+    { c: 21, r: 13, w: 3 },
+    { c: 14, r: 13, w: 2 },
+
+    // violet interjections
+    { c: 22, r: 2,  w: 2,        tone: 'violet' },
+    { c: 3,  r: 9,  w: 2, h: 2,  tone: 'violet' },
+    { c: 22, r: 12, w: 2,        tone: 'violet' }
+  ];
+
+  /* ------------------------------------------------------------------
+     SUBGRIDS
+     A region of the main grid subdivided into finer cells, so an edge can
+     step at half scale (or quarter) and read as pixels rather than blocks.
+
+       c, r, w, h   the region, in MAIN grid cells
+       scale        2 = half-size cells (default), 4 = quarter, …
+       cells        blocks addressed in the FINER units, 1-indexed from
+                    the region's own top-left corner
+
+     A region w:3 h:2 at scale 2 therefore gives you a 6 × 4 field.
+     ------------------------------------------------------------------ */
+
+  const SUBGRIDS = [
+    // ragged underside of the top-left mass
+    {
+      c: 6, r: 6, w: 3, h: 1, scale: 2,
+      cells: [
+        { c: 1, r: 1, w: 4 },
+        { c: 5, r: 1, w: 1 },
+        { c: 1, r: 2, w: 2 },
+        { c: 3, r: 2, w: 1 }
+      ]
+    },
+
+    // break-up where the staircase lands
+    {
+      c: 9, r: 5, w: 3, h: 2, scale: 2,
+      cells: [
+        { c: 1, r: 1, w: 3 },
+        { c: 4, r: 1, w: 2 },
+        { c: 1, r: 2, w: 2 },
+        { c: 3, r: 2, w: 1 },
+        { c: 5, r: 2, w: 1 },
+        { c: 1, r: 3, w: 1 },
+        { c: 2, r: 3, w: 1, tone: 'violet' }
+      ]
+    },
+
+    // fine noise along the lower drift
+    {
+      c: 13, r: 11, w: 4, h: 2, scale: 2,
+      cells: [
+        { c: 1, r: 1, w: 4 },
+        { c: 5, r: 1, w: 2 },
+        { c: 1, r: 2, w: 3 },
+        { c: 4, r: 2, w: 1 },
+        { c: 6, r: 2, w: 2, tone: 'violet' },
+        { c: 1, r: 3, w: 2 },
+        { c: 3, r: 3, w: 1 },
+        { c: 7, r: 4, w: 1 }
+      ]
+    }
+  ];
+
+  const grid = document.getElementById('grid');
+
+  function place(el, b) {
+    el.style.gridColumn = `${b.c} / span ${b.w || 1}`;
+    el.style.gridRow = `${b.r} / span ${b.h || 1}`;
+  }
+
+  function paintGrid() {
+    grid.textContent = '';
+
+    for (const b of BLOCKS) {
+      const el = document.createElement('div');
+      el.className = 'block' + (b.tone ? ' ' + b.tone : '');
+      place(el, b);
+      grid.appendChild(el);
+    }
+
+    for (const s of SUBGRIDS) {
+      const scale = s.scale || 2;
+      const box = document.createElement('div');
+      box.className = 'subgrid';
+      place(box, s);
+      box.style.setProperty('--sc', (s.w || 1) * scale);
+      box.style.setProperty('--sr', (s.h || 1) * scale);
+
+      for (const b of s.cells) {
+        const el = document.createElement('div');
+        el.className = 'block' + (b.tone ? ' ' + b.tone : '');
+        place(el, b);
+        box.appendChild(el);
+      }
+      grid.appendChild(box);
+    }
+  }
+
+  paintGrid();
+
+  // G toggles the guide lines while composing
+  document.addEventListener('keydown', e => {
+    if (e.key === 'g' || e.key === 'G') grid.classList.toggle('guides');
+  });
+
+  /* ------------------------------------------------------------------
+     PATTERN STRIPS
+     Each one owns a window of the scroll runway and fades up, holds, then
+     fades out again inside it:
+
+       src    file in media/patternsymbol
+       c, r   where it sits, in main-grid cells
+       w, h   how many cells it spans
+       at     where its window opens  (0 = top of page, 1 = bottom)
+       span   how much scroll the whole appear→hold→disappear takes
+       rise   px it drifts upward across its window (parallax)
+
+     Overlapping windows are fine — that is how two strips cross over.
+     ------------------------------------------------------------------ */
+
+  const ITEMS = [
+    // three of the five strips, stood vertically
+    { src: 'pattern 1.png', kind: 'strip',  at: .04, span: .34 },
+    { src: 'pattern 3.png', kind: 'strip',  at: .33, span: .34 },
+    { src: 'pattern 5.png', kind: 'strip',  at: .62, span: .34 },
+
+    // discipline symbols, interleaved between them
+    { src: 'animation.png',    kind: 'symbol', at: .14, span: .28 },
+    { src: 'game.png',         kind: 'symbol', at: .42, span: .28 },
+    { src: 'interactivity.png',kind: 'symbol', at: .70, span: .28 }
+  ];
+
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const ri  = (a, b) => Math.floor(rnd(a, b + 1));
+
+  const patternLayer = document.getElementById('patterns');
+  const css = getComputedStyle(document.documentElement);
+  const cssn = n => +css.getPropertyValue(n);
+  const COLS = cssn('--cols');
+  const ROWS = cssn('--rows');
+
+  /* Nothing decorative is allowed to sit on the type. These are the two
+     regions that carry text, taken from the same variables that place
+     them, so moving the hero or the stage moves the exclusion with it. */
+  const KEEPOUT = [
+    { c: cssn('--panel-col'), r: cssn('--panel-row'), w: cssn('--panel-w'), h: cssn('--panel-h') },
+    { c: cssn('--hero-col'),  r: cssn('--hero-row'),  w: cssn('--hero-w'),  h: cssn('--hero-h')  },
+    { c: cssn('--cols') - 4,  r: 1, w: 5, h: 2 }   // the event info, top right
+  ];
+
+  // rectangles in cells, with a one-cell margin so nothing crowds an edge
+  function clashes(c, r, w, h) {
+    return KEEPOUT.some(k =>
+      c < k.c + k.w + 1 && c + w > k.c - 1 &&
+      r < k.r + k.h + 1 && r + h > k.r - 1);
+  }
+
+  // size and position are rolled fresh on load, within ranges that keep
+  // things on canvas — re-run the page for a different arrangement
+  const strips = ITEMS.map(p => {
+    const el = document.createElement('div');
+    el.className = 'item ' + p.kind;
+
+    let h, w, c, r;
+
+    if (p.kind === 'strip') {
+      h = ri(5, 10);                 // tall
+      w = ri(1, 2);                  // narrow
+      // the artwork's long edge runs the height of its cells, scaled a little
+      el.style.setProperty('--len', `calc(${h} * (100vh / ${ROWS}) * ${rnd(.75, 1.15).toFixed(2)})`);
+    } else {
+      h = ri(2, 4);                  // roughly square
+      w = h;
+    }
+
+    // re-roll until it lands clear of the text regions; if a size simply
+    // cannot fit anywhere, fall back to the far edges of the canvas
+    let tries = 0;
+    do {
+      c = ri(1, Math.max(1, COLS - w));
+      r = ri(1, Math.max(1, ROWS - h));
+    } while (clashes(c, r, w, h) && ++tries < 60);
+
+    if (clashes(c, r, w, h)) {
+      c = Math.random() < .5 ? 1 : Math.max(1, COLS - w);
+      r = ri(1, Math.max(1, ROWS - h));
+    }
+
+    el.style.setProperty('--c', c);
+    el.style.setProperty('--r', r);
+    el.style.setProperty('--w', w);
+    el.style.setProperty('--h', h);
+
+    const img = document.createElement('img');
+    img.src = 'media/patternsymbol/' + encodeURIComponent(p.src);
+    img.alt = '';
+    img.loading = 'lazy';
+    el.appendChild(img);
+    patternLayer.appendChild(el);
+
+    return { ...p, el, rise: rnd(50, 130), shown: -1 };
+  });
+
+  function scrollProgress() {
+    const travel = document.documentElement.scrollHeight - window.innerHeight;
+    return travel > 0 ? window.scrollY / travel : 0;
+  }
+
+  function paintPatterns(p) {
+    for (const s of strips) {
+      // position within this item's own window, 0 → 1
+      const t = (p - s.at) / s.span;
+      let o = 0;
+
+      if (t > 0 && t < 1) {
+        // a bell: in over the first third, hold, out over the last third
+        o = t < .33 ? t / .33
+          : t > .67 ? (1 - t) / .33
+          : 1;
+      }
+
+      const v = Math.round(Math.max(0, Math.min(1, o)) * 100) / 100;
+      if (v !== s.shown) {
+        s.el.style.opacity = v;
+        s.el.style.transform = `translateY(${((1 - (t || 0)) * s.rise).toFixed(1)}px)`;
+        s.shown = v;
+      }
+    }
+  }
+
+  /* Smoothed scroll ---------------------------------------------------
+     The page scrolls natively; what is eased is the value the patterns
+     are driven from. It chases the real scroll position on a time
+     constant, so the fades glide and settle instead of tracking every
+     notch of the wheel. */
+
+  const SCROLL_TAU = .22;   // seconds — larger is looser and more floaty
+  let scrollTarget = scrollProgress();
+  let scrollEased = scrollTarget;
+  let scrollLast = 0;
+  let scrollRunning = false;
+
+  function scrollFrame(now) {
+    const dt = Math.min((now - scrollLast) / 1000, 1 / 30);
+    scrollLast = now;
+
+    scrollEased += (scrollTarget - scrollEased) * (1 - Math.exp(-dt / SCROLL_TAU));
+    paintPatterns(scrollEased);
+    syncScrollPanel(scrollEased);
+
+    if (Math.abs(scrollTarget - scrollEased) < .0002) {
+      scrollEased = scrollTarget;
+      paintPatterns(scrollEased);
+      syncScrollPanel(scrollEased);
+      scrollRunning = false;
+      return;
+    }
+    requestAnimationFrame(scrollFrame);
+  }
+
+  function scrollWake() {
+    scrollTarget = scrollProgress();
+    if (scrollRunning) return;
+    scrollRunning = true;
+    scrollLast = performance.now();
+    requestAnimationFrame(scrollFrame);
+  }
+
+  window.addEventListener('scroll', scrollWake, { passive: true });
+  window.addEventListener('resize', scrollWake);
+  paintPatterns(scrollEased);
+
+  /* ------------------------------------------------------------------
+     THE LENS
+     Moving the pointer clears the blur beneath it — the soft lower half
+     of the page resolves into focus wherever it is looked at.
+     ------------------------------------------------------------------ */
+
+  const LENS_R = 210;          // radius in px at full strength
+  // Time constants, in seconds — the time to close ~63% of the remaining gap.
+  // Smaller = tighter and more immediate; larger = looser and floatier.
+  const LENS_TAU_MOVE = .055;  // how closely the lens tracks the cursor
+  const LENS_TAU_FADE = .11;   // how fast it opens and closes
+
+  const veil = document.querySelector('.veil');
+  const lens = { tx: 0, ty: 0, x: 0, y: 0, r: 0, tr: 0, running: false, last: 0 };
+
+  // where the veil begins, measured once rather than every frame
+  let veilTop = 0;
+  function measureVeil() { veilTop = veil.getBoundingClientRect().top; }
+  measureVeil();
+  window.addEventListener('resize', measureVeil);
+  let wroteX = -1, wroteY = -1, wroteR = -1;
+
+  function lensFrame(now) {
+    // Frame-rate independent smoothing. A fixed per-frame fraction moves
+    // further on a long frame than a short one, which is what reads as
+    // jagged; deriving the factor from elapsed time removes that entirely.
+    const dt = Math.min((now - lens.last) / 1000, 1 / 30);
+    lens.last = now;
+
+    const kMove = 1 - Math.exp(-dt / LENS_TAU_MOVE);
+    const kFade = 1 - Math.exp(-dt / LENS_TAU_FADE);
+
+    lens.x += (lens.tx - lens.x) * kMove;
+    lens.y += (lens.ty - lens.y) * kMove;
+    lens.r += (lens.tr - lens.r) * kFade;
+
+    // snap the last fraction of a pixel rather than crawling toward it
+    if (Math.abs(lens.tx - lens.x) < .35) lens.x = lens.tx;
+    if (Math.abs(lens.ty - lens.y) < .35) lens.y = lens.ty;
+
+    // five masks re-rasterise on every write, so skip writes too small to
+    // change a pixel — it keeps frames short, which keeps motion smooth
+    const x = Math.round(lens.x * 2) / 2;
+    // the veil starts partway down the page, and mask coordinates are
+    // relative to the element, so the cursor's Y is offset into its space
+    const y = Math.round((lens.y - veilTop) * 2) / 2;
+    const r = Math.round(lens.r);
+
+    if (x !== wroteX) { veil.style.setProperty('--lens-x', x + 'px'); wroteX = x; }
+    if (y !== wroteY) { veil.style.setProperty('--lens-y', y + 'px'); wroteY = y; }
+    if (r !== wroteR) { veil.style.setProperty('--lens-r', r + 'px'); wroteR = r; }
+
+    // closed and settled: stop burning frames until the pointer returns
+    if (lens.tr === 0 && lens.r < .5) {
+      lens.r = 0;
+      lens.running = false;
+      veil.style.setProperty('--lens-r', '0px');
+      wroteR = 0;
+      return;
+    }
+    requestAnimationFrame(lensFrame);
+  }
+
+  /* "Invisible", letter by letter ------------------------------------
+     Each letter is its own target: it resolves on how near the cursor is
+     to that letter specifically, so sweeping across the word pulls it
+     into focus a character at a time. On top of that every letter has a
+     slow drift of its own, which keeps the word breathing when nobody is
+     touching it. */
+
+  const VEILED_BLUR  = 7;    // px, at rest
+  const VEILED_REACH = 190;  // px at which a letter begins to resolve
+  const DRIFT_FLOOR  = .38;  // how far the ambient drift clears the blur
+  const DRIFT_FADE   = .32;  // how much of the fade-out it takes with it
+
+  const veiled = document.getElementById('veiled');
+
+  const letters = [...veiled.textContent].map(ch => {
+    const b = document.createElement('b');
+    b.textContent = ch;
     return {
-      svg,
-      text,
-      tp: svg.querySelector('textPath'),
-      path: svg.querySelector('path'),
-      speed: parseFloat(text.dataset.speed), // user units/sec, sign = direction
-      unit: 0,
-      offset: 0,
-      written: NaN,
-      factor: 1,
-      target: 1
+      el: b,
+      box: null,
+      phase: Math.random() * Math.PI * 2,
+      speed: .28 + Math.random() * .34,   // each letter drifts at its own rate
+      wroteB: -1,
+      wroteO: -1
     };
   });
 
-  const SVG_NS = 'http://www.w3.org/2000/svg';
+  veiled.textContent = '';
+  letters.forEach(l => veiled.appendChild(l.el));
 
-  // one turn of the main band's pattern: seven shape berths, three repeats apart
-  const SLOT_SPACING = 3;
-  const PERIOD_REPEATS = 7 * SLOT_SPACING + 2;
-  let slots = [];   // the shape berths inside that pattern
-
-  // Measure on a plain <text>, NOT on the textPath: a textPath only reports the
-  // glyphs it actually draws, and anything past the end of the path is dropped —
-  // measuring there returns a short value, and shifting by a short value is
-  // exactly the jump you see each time the loop restarts.
-  function measure(svg, sample, str) {
-    if (!str) return 0;
-    const probe = document.createElementNS(SVG_NS, 'text');
-    probe.setAttribute('font-size', sample.getAttribute('font-size'));
-    probe.setAttribute('x', '0');
-    probe.setAttribute('y', '-9999');
-    probe.setAttribute('visibility', 'hidden');
-    probe.setAttribute('xml:space', 'preserve');
-    probe.textContent = str;
-    svg.appendChild(probe);
-    const w = probe.getComputedTextLength();
-    probe.remove();
-    return w;
+  function measureVeiled() {
+    for (const l of letters) l.box = l.el.getBoundingClientRect();
   }
+  measureVeiled();
+  window.addEventListener('resize', measureVeiled);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureVeiled);
 
-  // tile each path with enough repeats to overhang both ends, so the seam never shows
-  function layout() {
-    for (const b of bands) {
-      b.pattern = (b === bands[0]) ? mainPattern(b) : UNIT;
-      b.unit = measure(b.svg, b.text, b.pattern);
-      // + 3 units of slack: one for the head overhang, two so the tail still
-      // reaches past the end of the path at every point in the cycle
-      const need = Math.ceil((b.path.getTotalLength() + b.unit * 3) / b.unit) + 1;
-      b.tp.textContent = b.pattern.repeat(need);
-      b.offset = 0;
-      b.written = NaN;
+  // the drift is slow and the reveal is forgiving, so this runs at half
+  // rate — nine blurred glyphs re-rasterising every frame is not free
+  let veiledTick = 0;
+
+  function veiledFrame(now) {
+    if (!document.hidden) requestAnimationFrame(veiledFrame);
+    if ((veiledTick++ & 1) && lens.r < 1) return;
+
+    const t = now / 1000;
+    const live = lens.r > 1;
+
+    for (const l of letters) {
+      // 0 when the cursor is on the letter, 1 when it is out of reach
+      let near = 1;
+      if (live && l.box) {
+        const dx = Math.max(l.box.left - lens.x, 0, lens.x - l.box.right);
+        const dy = Math.max(l.box.top - lens.y, 0, lens.y - l.box.bottom);
+        const d = Math.hypot(dx, dy) / VEILED_REACH;
+        const k = Math.min(1, d);
+        near = k * k * (3 - 2 * k);    // smoothstep, so arrival is not abrupt
+      }
+
+      // ambient: a slow sine per letter, never quite reaching full focus
+      const wave = .5 + .5 * Math.sin(t * l.speed + l.phase);
+      const drift = DRIFT_FLOOR + (1 - DRIFT_FLOOR) * wave;
+
+      // the cursor always wins: near 0, the product is 0 whatever the drift
+      const soft = near * drift;
+
+      const px = Math.round(soft * VEILED_BLUR * 5) / 5;
+      const op = Math.round((1 - DRIFT_FADE * soft) * 100) / 100;
+
+      if (px !== l.wroteB) { l.el.style.setProperty('--b', px + 'px'); l.wroteB = px; }
+      if (op !== l.wroteO) { l.el.style.setProperty('--o', op); l.wroteO = op; }
     }
   }
 
-  // The main band's repeating unit is a run of "LOOPS ON " with blanks punched
-  // into it — each blank is a berth for a shape, so the line genuinely breaks
-  // instead of the shape being laid over the type. Returns the period string and
-  // records where the middle of each gap falls, in user units from the period's start.
-  function mainPattern(b) {
-    if (!slots.length) return UNIT;
-
-    const NBSP = ' ';   // plain spaces collapse in SVG text; these do not
-    const gapW = measure(b.svg, b.text, NBSP.repeat(20)) / 20 || 1;
-
-    const tokens = Array(PERIOD_REPEATS).fill(UNIT);
-    for (const s of slots) {
-      // a berth wide enough for the shape plus breathing room either side
-      s.gap = NBSP.repeat(Math.max(3, Math.round((200 * s.scale + 130) / gapW)));
-      tokens[s.index] = s.gap;
-    }
-
-    for (const s of slots) {
-      const before = tokens.slice(0, s.index).join('');
-      s.centre = measure(b.svg, b.text, before) + measure(b.svg, b.text, s.gap) / 2;
-    }
-
-    return tokens.join('');
-  }
-
-  layout();
-  // the repeat width settles once Bitcount actually loads, and the shape pattern
-  // is measured in repeats, so both are refitted together
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => { layout(); buildRiders(); });
-  }
-
-  bands.forEach(b => {
-    b.text.addEventListener('pointerenter', () => { b.target = SLOW; });
-    b.text.addEventListener('pointerleave', () => { b.target = 1; });
-  });
-
-  // laying out text on a path is the expensive part of the frame, so the two
-  // faint supporting bands only refresh on alternate frames — at their speed and
-  // opacity the halved rate is invisible, and it cuts the per-frame work by a third
-  bands[0].every = 1;
-  bands[1].every = 2;
-  bands[2].every = 2;
-  bands[1].phase = 0;
-  bands[2].phase = 1;
-
-  let last = performance.now();
-  let frame = 0;
-  let running = true;
-
-  function tick(now) {
-    // a long frame (tab wake, layout hitch) must not translate into a lurch
-    const dt = Math.min((now - last) / 1000, 1 / 30);
-    last = now;
-    frame++;
-
-    for (const b of bands) {
-      // frame-rate independent easing: same curve at 60Hz, 120Hz or a dropped frame
-      b.factor += (b.target - b.factor) * (1 - Math.pow(1 - EASE, dt * 60));
-
-      b.offset += b.speed * b.factor * dt;
-      // wrap within one repeat so the scroll reads as endless
-      if (b.offset >= b.unit) b.offset -= b.unit;
-      else if (b.offset < 0) b.offset += b.unit;
-
-      if (b.every > 1 && frame % b.every !== b.phase) continue;
-
-      const next = b.offset - b.unit;
-      // a write below a hundredth of a unit cannot change a rendered glyph, but
-      // it does force the whole string to be re-laid out along the path
-      if (Math.abs(next - b.written) < 0.01) continue;
-      b.written = next;
-      b.tp.setAttribute('startOffset', next.toFixed(2));
-    }
-
-    // shapes ride the same scroll value as the main band's text
-    placeRiders(bands[0].offset);
-    updateSpots(dt);
-
-    if (running) requestAnimationFrame(tick);
-  }
-
-  requestAnimationFrame(tick);
-
-  // a hidden tab should not be laying out text on paths
+  requestAnimationFrame(veiledFrame);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      running = false;
-    } else if (!running) {
-      running = true;
-      last = performance.now();
-      requestAnimationFrame(tick);
-    }
+    if (!document.hidden) requestAnimationFrame(veiledFrame);
   });
 
-  // --- spotlight that trails the cursor across the dark elements -------
-  // Deliberately scoped to elements carrying .spot — the page background never
-  // lights up, only the black pills and the ink hero lines.
-  const DRAG = 0.055;   // lower = heavier lag behind the pointer
-  const FADE = 0.10;    // how fast the light comes up and dies away
-
-  const spots = [...document.querySelectorAll('.spot')].map(el => ({
-    el, tx: 0, ty: 0, x: 0, y: 0, a: 0, ta: 0, live: false
-  }));
-
-  spots.forEach(s => {
-    s.el.addEventListener('pointerenter', e => {
-      const r = s.el.getBoundingClientRect();
-      s.tx = e.clientX - r.left;
-      s.ty = e.clientY - r.top;
-      // start under the cursor rather than sweeping in from a stale position
-      if (s.a < 0.01) { s.x = s.tx; s.y = s.ty; }
-      s.ta = 1;
-      s.live = true;
-    });
-    s.el.addEventListener('pointermove', e => {
-      const r = s.el.getBoundingClientRect();
-      s.tx = e.clientX - r.left;
-      s.ty = e.clientY - r.top;
-    });
-    s.el.addEventListener('pointerleave', () => { s.ta = 0; });
-  });
-
-  function updateSpots(dt) {
-    for (const s of spots) {
-      if (!s.live) continue;
-
-      const kMove = 1 - Math.pow(1 - DRAG, dt * 60);
-      const kFade = 1 - Math.pow(1 - FADE, dt * 60);
-
-      s.x += (s.tx - s.x) * kMove;
-      s.y += (s.ty - s.y) * kMove;
-      s.a += (s.ta - s.a) * kFade;
-
-      s.el.style.setProperty('--spot-x', s.x.toFixed(1) + 'px');
-      s.el.style.setProperty('--spot-y', s.y.toFixed(1) + 'px');
-      s.el.style.setProperty('--spot-a', s.a.toFixed(3));
-
-      // fully dark again: stop touching it until the pointer comes back
-      if (s.ta === 0 && s.a < 0.005) {
-        s.a = 0;
-        s.live = false;
-        s.el.style.setProperty('--spot-a', '0');
-      }
-    }
+  function lensWake() {
+    if (lens.running) return;
+    lens.running = true;
+    lens.last = performance.now();
+    requestAnimationFrame(lensFrame);
   }
 
-  // --- loop shapes travelling in the main path's marquee ---------------
-  const SHAPES = ['loop-clover', 'loop-eight', 'loop-knot', 'loop-o', 'loop-pretzel', 'loop-spiral', 'loop-trefoil'];
-  const charms = document.getElementById('charms');
-  const mainBand = bands[0];
-  const mainPath = mainBand.path;
-
-  const rand = (min, max) => min + Math.random() * (max - min);
-
-  let shapeDefs = null;   // path data, once fetched
-  let riders = [];        // live elements, each a copy of a slot one period apart
-
-  // One berth per shape, walking the list in order, so a full turn of the pattern
-  // shows every file before any of them comes round again. The period has to hold
-  // all of them: the marquee wraps by exactly one period, so anything that varies
-  // between periods would visibly jump at the wrap.
-  function makeSlots() {
-    slots = [];
-    for (let i = 0; i < shapeDefs.length; i++) {
-      slots.push({
-        // evenly spaced berths, nudged a repeat either way so it never reads as a grid
-        index: 1 + i * SLOT_SPACING + Math.floor(rand(0, 2)),
-        shape: i,
-        scale: rand(0.16, 0.44),
-        spin: rand(0, 360)
-      });
-    }
+  function lensAim(e) {
+    lens.tx = e.clientX;
+    lens.ty = e.clientY;
+    // first sighting: open where the cursor already is, don't fly in
+    if (lens.r < 1 && lens.tr === 0) { lens.x = lens.tx; lens.y = lens.ty; }
+    lens.tr = LENS_R;
+    lensWake();
   }
 
-  function buildRiders() {
-    if (!shapeDefs || !mainBand.unit) return;
-
-    charms.textContent = '';
-    riders = [];
-
-    const period = mainBand.unit;   // one full pattern, gaps included
-    const total = mainPath.getTotalLength();
-    const reps = Math.ceil(total / period) + 2;
-
-    for (let k = -1; k < reps; k++) {
-      for (const s of slots) {
-        const g = document.createElementNS(SVG_NS, 'g');
-        const path = document.createElementNS(SVG_NS, 'path');
-        path.setAttribute('d', shapeDefs[s.shape]);
-        // keep the stroke readable however small the shape is drawn
-        path.setAttribute('stroke-width', (13 * Math.min(1, 0.34 / s.scale)).toFixed(1));
-        g.appendChild(path);
-        charms.appendChild(g);
-        // sits at the middle of the blank its own slot punched in the text
-        riders.push({ g, slot: s, base: k * period + s.centre });
-      }
-    }
+  // pointerrawupdate fires ahead of pointermove, at the device's real sample
+  // rate — noticeably less latency on a high-polling mouse where supported
+  if ('onpointerrawupdate' in window) {
+    window.addEventListener('pointerrawupdate', lensAim);
+  } else {
+    window.addEventListener('pointermove', lensAim);
   }
 
-  // place every rider for the current scroll position
-  function placeRiders(scroll) {
-    if (!riders.length) return;
-    const period = mainBand.unit;
-    const total = mainPath.getTotalLength();
-    const phase = ((scroll % period) + period) % period;
+  document.addEventListener('pointerleave', () => { lens.tr = 0; lensWake(); });
+  window.addEventListener('blur', () => { lens.tr = 0; lensWake(); });
 
-    for (const r of riders) {
-      const at = r.base + phase;
-
-      if (at < 0 || at > total) {
-        if (r.shown !== false) { r.g.setAttribute('display', 'none'); r.shown = false; }
-        continue;
-      }
-      if (r.shown === false) { r.g.removeAttribute('display'); r.shown = true; }
-
-      const p = mainPath.getPointAtLength(at);
-      const q = mainPath.getPointAtLength(Math.min(total, at + 6));
-      // ride the tangent, so a shape banks through the loop-de-loops with the text
-      const angle = Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI;
-      // sit in the line, lifted off the baseline to the type's optical centre
-      const push = -11;
-      const rad = (angle * Math.PI) / 180;
-      const x = p.x - Math.sin(rad) * push;
-      const y = p.y + Math.cos(rad) * push;
-
-      r.g.setAttribute('transform',
-        `translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(angle + r.slot.spin).toFixed(1)}) ` +
-        `scale(${r.slot.scale.toFixed(3)}) translate(-100,-100)`);
-    }
-  }
-
-  Promise.all(SHAPES.map(name =>
-    fetch(`media/${name}.svg`)
-      .then(r => r.text())
-      .then(txt => (txt.match(/\sd="([^"]+)"/) || [])[1])
-  )).then(defs => {
-    shapeDefs = defs.filter(Boolean);
-    if (!shapeDefs.length) return;
-    // choose the berths, re-tile the text around them, then hang the shapes in
-    makeSlots();
-    layout();
-    buildRiders();
-  }).catch(() => { /* shapes are decorative; a failed fetch just leaves them out */ });
-
-  // --- tray ------------------------------------------------------------
   const header = document.getElementById('header');
-  const tray = document.getElementById('tray');
+  const stage = document.getElementById('stage');
   const links = [...document.querySelectorAll('.nav a')];
   const panels = [...document.querySelectorAll('.panel')];
-  let pinned = null;
-  let closeTimer;
 
-  function open(name) {
-    clearTimeout(closeTimer);
-    const link = links.find(a => a.dataset.panel === name);
-    links.forEach(a => a.classList.toggle('active', a === link));
+  /* One marker per category, in the order of the buttons, sitting just
+     outside the panel's top-left. Whichever panel is on stage takes the
+     accent; the rest stay quiet. */
+  const dots = document.getElementById('dots');
+
+  let lastDir = 1;      // which way the last wheel event went
+  let pinned = null;    // clicked open, stays until dismissed
+  let hovering = null;  // previewed by the pointer, beats the scroll
+  let leaveTimer;
+
+  /* Scroll also walks the panels, in the order of the buttons: the page
+     brings SCHEDULE, then ARTISTS, then PROJECTS forward as it descends.
+     The pointer always outranks it — hovering or pinning takes the stage
+     until you let go, and the scroll position resumes from wherever it
+     has got to. */
+  const SCROLL_PANELS = [
+    { name: 'schedule', from: .44, to: .55 },
+    { name: 'speakers', from: .57, to: .67 },
+    { name: 'projects', from: .69, to: .79 },
+    { name: 'gallery',  from: .81, to: .89 },
+    { name: 'credits',  from: .91, to: 1 }
+  ];
+
+  /* The statement comes first, resolving word by word across the whole
+     paragraph as one continuous sentence, then clearing before SCHEDULE. */
+  const STATEMENT_FROM = .03;
+  const STATEMENT_TO   = .32;
+  const STATEMENT_OUT  = .40;
+  const STATEMENT_EDGE = 5;    // words in the soft leading edge of the wipe
+
+  const statement = document.getElementById('statement');
+
+  // rebuild each clause as individual words, keeping its weight
+  const words = [];
+  for (const clause of [...statement.children]) {
+    const parts = clause.textContent.split(/(\s+)/);
+    clause.textContent = '';
+    for (const part of parts) {
+      if (!part) continue;
+      if (/^\s+$/.test(part)) { clause.appendChild(document.createTextNode(' ')); continue; }
+      const w = document.createElement('w');
+      w.textContent = part;
+      clause.appendChild(w);
+      words.push({ el: w, o: -1, b: -1 });
+    }
+  }
+
+  /* The sentence comes apart as it ends: nothing moves for the first part,
+     then each word is displaced a little further than the last — falling,
+     drifting sideways, tipping slightly off the baseline. The amount ramps
+     with the square of how far into the tail the word is, so the break-up
+     accelerates rather than reading as evenly scattered. */
+  const FRAG_FROM = .58;   // fraction of the sentence that stays composed
+  const FRAG_DROP = 2.6;   // em of fall at the very end
+
+  (function fragment() {
+    const start = Math.floor(words.length * FRAG_FROM);
+    const span = Math.max(1, words.length - 1 - start);
+
+    words.forEach((w, i) => {
+      if (i < start) return;
+      const t = (i - start) / span;
+      const k = t * t;                       // accelerating
+      // purely vertical: each word sits lower than the last, by a growing
+      // amount, with a little jitter so the fall is not a neat diagonal
+      const jitter = .7 + Math.random() * .6;
+      w.el.style.setProperty('--dy', (jitter * FRAG_DROP * k).toFixed(2) + 'em');
+    });
+  })();
+
+  let statementFaded = null;
+
+  function paintStatement(p, blocked) {
+    const f = (p - STATEMENT_FROM) / (STATEMENT_TO - STATEMENT_FROM);
+    const head = f * (words.length + STATEMENT_EDGE);   // how far the wipe has travelled
+
+    for (let i = 0; i < words.length; i++) {
+      // each word resolves as the edge passes over it
+      const t = Math.max(0, Math.min(1, (head - i) / STATEMENT_EDGE));
+      const o = Math.round(t * 20) / 20;
+      const b = Math.round((1 - t) * 8 * 2) / 2;
+
+      const w = words[i];
+      if (o !== w.o) { w.el.style.setProperty('--o', o); w.o = o; }
+      if (b !== w.b) { w.el.style.setProperty('--b', b + 'px'); w.b = b; }
+    }
+
+    // it steps aside for the panels, whether reached by scroll or pointer
+    const gone = blocked || p > STATEMENT_OUT;
+    if (gone !== statementFaded) {
+      statement.style.opacity = gone ? 0 : 1;
+      statementFaded = gone;
+    }
+  }
+
+  let scrollPanel = null;
+
+  function syncScrollPanel(p) {
+    let want = null;
+    for (const s of SCROLL_PANELS) {
+      if (p >= s.from && p <= s.to) { want = s.name; break; }
+    }
+    if (want !== scrollPanel) {
+      scrollPanel = want;
+      if (!pinned && !hovering) show(scrollPanel);
+    }
+    paintStatement(p, !!(pinned || hovering || scrollPanel));
+  }
+
+  // one marker per category, in panel order
+  panels.forEach((p, i) => {
+    const mark = document.createElement('i');
+    mark.style.setProperty('--shape', `url("media/patternsymbol/shape%20${i + 1}.png")`);
+    mark.dataset.panel = p.dataset.panel;
+    mark.setAttribute('role', 'button');
+    mark.setAttribute('aria-label', p.dataset.panel);
+    dots.appendChild(mark);
+  });
+
+  /* Clicking a marker travels to that panel's stretch of the page rather
+     than just swapping the panel — otherwise the stage and the scroll
+     position would disagree, and the next nudge of the wheel would snap
+     back to whatever the scroll says. Two things need handling: the panel
+     is pinned for the trip, so passing through the intervening ranges does
+     not flick through their panels, and the pin is released on arrival so
+     the scroll takes the wheel again. */
+
+  let jumpTimer;
+
+  dots.addEventListener('click', e => {
+    const mark = e.target.closest('i');
+    if (!mark) return;
+
+    const name = mark.dataset.panel;
+    const range = SCROLL_PANELS.find(r => r.name === name);
+    if (!range) return;
+
+    clearTimeout(jumpTimer);
+    hovering = null;
+    pinned = name;            // holds the stage for the length of the trip
+    show(name);
+
+    const travel = document.documentElement.scrollHeight - window.innerHeight;
+    const mid = (range.from + range.to) / 2;
+    window.scrollTo({ top: travel * mid, behavior: 'smooth' });
+
+    jumpTimer = setTimeout(() => {
+      if (pinned === name) {
+        pinned = null;
+        syncScrollPanel(scrollEased);
+      }
+    }, 900);
+  });
+
+  // showing null clears the stage; anything else cross-fades to that panel
+  function show(name) {
+    const arriving = panels.find(p => p.dataset.panel === name);
+    // a panel that is newly on stage starts at the edge the scroll came
+    // from, so going down enters at the top of the list and coming back up
+    // enters at the bottom
+    if (arriving && !arriving.classList.contains('active')) {
+      arriving.scrollTop = lastDir >= 0 ? 0 : arriving.scrollHeight - arriving.clientHeight;
+      if (listPanel === arriving) listTarget = arriving.scrollTop;
+    }
+
+    links.forEach(a => a.classList.toggle('active', a.dataset.panel === name));
     panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
-    tray.style.height = tray.scrollHeight + 'px';
+    dots.classList.toggle('on', !!name);
+    for (const mark of dots.children) mark.classList.toggle('cur', mark.dataset.panel === name);
+
+    if (arriving) requestAnimationFrame(() => paintBands(arriving));
+    // a panel summoned by the pointer clears the statement immediately,
+    // without waiting for the next scroll frame
+    paintStatement(scrollEased, !!name);
   }
 
-  function close() {
-    pinned = null;
-    links.forEach(a => a.classList.remove('active'));
-    tray.style.height = '0px';
-    closeTimer = setTimeout(() => {
-      if (!pinned) panels.forEach(p => p.classList.remove('active'));
-    }, 550);
+  // pointer has left the group: fall back to what is pinned, else to
+  // whatever the scroll position is currently showing
+  function settle() {
+    clearTimeout(leaveTimer);
+    // a short grace period, so crossing the gap from pill to panel is not
+    // read as leaving
+    leaveTimer = setTimeout(() => {
+      hovering = null;
+      show(pinned || scrollPanel);
+    }, 140);
   }
+
+  function hold() { clearTimeout(leaveTimer); }
 
   links.forEach(a => {
-    a.addEventListener('pointerenter', () => open(a.dataset.panel));
+    a.addEventListener('pointerenter', () => {
+      hold();
+      hovering = a.dataset.panel;
+      show(hovering);
+    });
     a.addEventListener('click', e => {
       e.preventDefault();
-      if (pinned === a.dataset.panel) { close(); } else { pinned = a.dataset.panel; open(pinned); }
+      hold();
+      if (pinned === a.dataset.panel) {
+        pinned = null;
+        show(scrollPanel);
+      } else {
+        pinned = a.dataset.panel;
+        show(pinned);
+      }
     });
   });
 
-  header.addEventListener('pointerleave', () => { if (!pinned) close(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-  document.addEventListener('click', e => {
-    if (pinned && !header.contains(e.target)) close();
+  header.addEventListener('pointerleave', settle);
+  stage.addEventListener('pointerenter', hold);
+  stage.addEventListener('pointerleave', settle);
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { pinned = null; hovering = null; show(scrollPanel); }
   });
+
+  document.addEventListener('click', e => {
+    if (pinned && !header.contains(e.target) && !stage.contains(e.target)) {
+      pinned = null;
+      show(scrollPanel);
+    }
+  });
+
+  // first read of the scroll position, once everything above is defined
+  requestAnimationFrame(() => syncScrollPanel(scrollEased));
+
+  /* ------------------------------------------------------------------
+     ONE SCROLL
+     A panel with more content than fits takes the scroll over while it has
+     somewhere left to go: the page holds still, the list moves, and once
+     the list reaches its end the page picks up again. Scrolling back up
+     does the same in reverse, so the journey down and the journey up pass
+     through the same places.
+     ------------------------------------------------------------------ */
+
+  /* Entries arrive and leave the way everything else on the page does:
+     out of blur at the edges of the panel, resolved through the middle.
+     Driven from the list's own scroll position, so it reads as part of the
+     same journey rather than a separate effect. */
+
+  const BAND_FADE = .3;    // fraction of the panel each edge fades over
+  const BAND_BLUR = 7;     // px of blur at the very edge
+
+  function paintBands(panel) {
+    const h = panel.clientHeight;
+    if (!h) return;
+    const zone = h * BAND_FADE;
+    const max = panel.scrollHeight - h;
+
+    // An edge only fades what is passing beyond it. At the top of the list
+    // there is nothing above to leave towards, so the top edge stops
+    // fading; likewise at the bottom. Otherwise the first and last entries
+    // would sit in a fade they can never scroll out of.
+    const lead = Math.max(0, Math.min(1, panel.scrollTop / zone));
+    const tail = Math.max(0, Math.min(1, (max - panel.scrollTop) / zone));
+
+    panel.querySelectorAll('li').forEach(li => {
+      const mid = li.offsetTop - panel.scrollTop + li.offsetHeight / 2;
+
+      const top = Math.max(0, Math.min(1, mid / zone));
+      const bot = Math.max(0, Math.min(1, (h - mid) / zone));
+
+      // ease each edge's effect out as that edge runs out of content
+      const k = Math.min(1 - (1 - top) * lead, 1 - (1 - bot) * tail);
+      const t = k * k * (3 - 2 * k);           // smoothstep
+
+      const o = Math.round(t * 20) / 20;
+      const b = Math.round((1 - t) * BAND_BLUR * 2) / 2;
+
+      if (li._o !== o) { li.style.setProperty('--o', o); li._o = o; }
+      if (li._b !== b) { li.style.setProperty('--b', b + 'px'); li._b = b; }
+    });
+  }
+
+  // every scrollable panel repaints its own bands, rAF-throttled
+  panels.forEach(panel => {
+    let queued = false;
+    panel.addEventListener('scroll', () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { paintBands(panel); queued = false; });
+    }, { passive: true });
+  });
+
+  window.addEventListener('resize', () => panels.forEach(paintBands));
+
+  function heldPanel() {
+    const panel = panels.find(p => p.classList.contains('active'));
+    if (!panel) return null;
+    // nothing to hold the scroll for if it all fits
+    return (panel.scrollHeight - panel.clientHeight > 4) ? panel : null;
+  }
+
+  /* The list glides the way the page does: the wheel moves a target and
+     the list chases it on a time constant, rather than jumping a notch per
+     event. Same easing shape as the scroll that drives the patterns, just
+     a little tighter so the list still feels attached to the hand. */
+
+  const LIST_TAU = .12;
+
+  let listPanel = null;
+  let listTarget = 0;
+  let listLast = 0;
+  let listRunning = false;
+
+  function listWake(panel) {
+    if (listPanel !== panel) {
+      listPanel = panel;
+      listTarget = panel.scrollTop;
+    }
+    if (!listRunning) {
+      listRunning = true;
+      listLast = performance.now();
+      requestAnimationFrame(listFrame);
+    }
+  }
+
+  function listFrame(now) {
+    const panel = listPanel;
+    if (!panel) { listRunning = false; return; }
+
+    const dt = Math.min((now - listLast) / 1000, 1 / 30);
+    listLast = now;
+
+    const next = panel.scrollTop + (listTarget - panel.scrollTop) * (1 - Math.exp(-dt / LIST_TAU));
+
+    if (Math.abs(listTarget - next) < .5) {
+      panel.scrollTop = listTarget;
+      paintBands(panel);
+      listRunning = false;
+      return;
+    }
+
+    panel.scrollTop = next;
+    paintBands(panel);
+    requestAnimationFrame(listFrame);
+  }
+
+  window.addEventListener('wheel', e => {
+    const dy = e.deltaY;
+    if (!dy) return;
+    lastDir = dy > 0 ? 1 : -1;
+
+    const panel = heldPanel();
+    if (!panel) return;
+
+    if (listPanel !== panel) { listPanel = panel; listTarget = panel.scrollTop; }
+
+    const max = panel.scrollHeight - panel.clientHeight;
+    // measured against the target, not the current position, so several
+    // wheel events in quick succession accumulate instead of fighting
+    const room = dy > 0 ? listTarget < max - 1 : listTarget > 1;
+
+    if (room) {
+      // the list still has somewhere to go, so it keeps the scroll
+      e.preventDefault();
+      listTarget = Math.max(0, Math.min(max, listTarget + dy));
+      listWake(panel);
+    }
+    // otherwise fall through and let the page carry on
+  }, { passive: false });
+
 </script>
+
+<div class="runway" aria-hidden="true"></div>
 
 </body>
 </html>
