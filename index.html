@@ -23,6 +23,7 @@
     --violet: #7328fa;
 
     --ui: 13px;          /* one size for nav, panels and the lockup */
+    --panel-pad-x: 1.6rem;
     --track: .035em;     /* one tracking for running text */
     /* The page travels from the dark ground to the light one as it is read.
        These are the surfaces that move; --mix runs 0 (invisible) to 1
@@ -486,7 +487,7 @@
     /* chaining is managed by the wheel handler, not by the browser: the
        panel has to be able to hand the scroll back when it reaches its end */
     overscroll-behavior: auto;
-    padding: 1.5rem 1.6rem;
+    padding: 1.5rem var(--panel-pad-x);
     border: 1px solid var(--rule);
     border-radius: 0;
     background: var(--panel-bg);
@@ -825,19 +826,53 @@
     opacity: .6;
   }
 
-  .gallery {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: .5rem;
-  }
-
+  /* the gallery reads as the same kind of band as a speaker or a project:
+     each category of photographs is captioned and ruled off from the next.
+     Images are held inside the panel's side padding, so the margin around
+     them matches the border the page frame sets, and their heights follow
+     from their real proportions — nothing is cropped or stretched. */
   .gallery img {
     display: block;
     width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border: 1px solid var(--rule);
+    height: auto;
+    margin-top: 1.5rem;
   }
+
+  .gallery .pano { aspect-ratio: 2029 / 746; }
+
+  /* a row of photographs that do not share an orientation. Giving each one
+     a flex-grow equal to its own aspect ratio makes the row resolve to a
+     single common height, which is what lets a portrait and a landscape
+     shot sit together without either being cut to fit. */
+  .gallery .shots {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .gallery .shots img { margin-top: 0; min-width: 0; }
+  .gallery .shots .land { flex: 4 1 0; aspect-ratio: 4 / 3; }
+  .gallery .shots .port { flex: 2.25 1 0; aspect-ratio: 3 / 4; }
+
+  /* a caption rather than a title: sized off the interface scale, so it
+     stays small whatever the list's heading size does */
+  .gallery .by {
+    margin-top: 0;
+    font-size: var(--ui);
+    letter-spacing: var(--track);
+  }
+
+  /* the shared list drops the rule under its last entry; here the final
+     band needs to close, so every band carries a bottom line and the first
+     one opens the set with a top line */
+  .panel.ruled .gallery li,
+  .panel.ruled .gallery li:last-child {
+    padding: 2.25rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .panel.ruled .gallery li:first-child { border-top: 1px solid var(--rule-soft); }
 
   /* hero ------------------------------------------------------------ */
 
@@ -1034,7 +1069,8 @@
       font-size: clamp(.95rem, 4.2vmin, 1.25rem);
     }
 
-    .panel { padding: 1rem .9rem; }
+    .panel { padding: 1rem var(--panel-pad-x); }
+    :root { --panel-pad-x: .9rem; }
 
     /* the panel's bar now sits on the opposite edge to the page's, so no
        separating gap is needed between them */
@@ -1073,7 +1109,11 @@
 
     .speakers li { font-size: clamp(1rem, 5vmin, 1.4rem); }
     .works .thumb, .works .frame { width: 100%; max-width: none; }
-    .gallery { grid-template-columns: repeat(2, 1fr); }
+
+    /* side by side there is not enough width for either shot to read */
+    .gallery .shots { display: block; }
+    .gallery .shots img { margin-top: 1rem; }
+    .gallery .shots img:first-child { margin-top: 0; }
     .credits { padding-top: 1rem; }
 
     /* the two lockups cannot share a line at this width */
@@ -1239,18 +1279,23 @@
         </ul>
       </section>
 
-      <section class="panel" data-panel="gallery">
-        <div class="gallery">
-          <img src="media/samplemedia/S4125361-bunny-flip.webp" alt="" loading="lazy" />
-          <img src="media/samplemedia/S4160839-heyyou.webp" alt="" loading="lazy" />
-          <img src="media/samplemedia/S4183453-state-of-mind.webp" alt="" loading="lazy" />
-          <img src="media/samplemedia/S3902619-planet-body.webp" alt="" loading="lazy" />
-          <img src="media/samplemedia/4178055-saros.webp" alt="" loading="lazy" />
-          <img src="media/samplemedia/s3836345-bleaching.webp" alt="" loading="lazy" />
-          <img src="media/samplemedia/s3836345-no-glisten.webp" alt="" loading="lazy" />
-          <img src="media/samplemedia/s4174970-notrealpizza.webp" alt="" loading="lazy" />
-          <img src="media/samplemedia/s4148098-a-late-bloomer.webp" alt="" loading="lazy" />
-        </div>
+      <section class="panel ruled" data-panel="gallery">
+        <ul class="speakers gallery">
+          <li><span class="by">Research Methods Panel Talks &bull; 22.09.26</span>
+            <div class="shots">
+              <img class="land" src="media/gallery/panel1.jpg" alt="" loading="lazy" />
+              <img class="port" src="media/gallery/panel2.jpg" alt="" loading="lazy" />
+            </div>
+            <div class="shots">
+              <img class="land" src="media/gallery/panel3.webp" alt="" loading="lazy" />
+            </div></li>
+          <li><span class="by">Research Methods Conference Day &bull; 29.09.26</span>
+            <img class="pano" src="media/gallery/gallery1.png" alt="" loading="lazy" />
+            <div class="shots">
+              <img class="land" src="media/gallery/gallery2.webp" alt="" loading="lazy" />
+              <img class="land" src="media/gallery/gallery3.webp" alt="" loading="lazy" />
+            </div></li>
+        </ul>
       </section>
 
       <section class="panel credits" data-panel="credits">
@@ -1983,8 +2028,10 @@
     { name: 'schedule', from: .44, to: .55 },
     { name: 'speakers', from: .57, to: .67 },
     { name: 'projects', from: .69, to: .79 },
-    { name: 'gallery',  from: .81, to: .89 },
-    { name: 'credits',  from: .91, to: 1 }
+    /* the gallery now carries two categories of photographs rather than one
+       image, so it holds the stage longer than the lists either side of it */
+    { name: 'gallery',  from: .81, to: .90 },
+    { name: 'credits',  from: .915, to: 1 }
   ];
 
   /* The statement comes first, resolving word by word across the whole
@@ -2277,7 +2324,16 @@
     const tail = Math.max(0, Math.min(1, (max - panel.scrollTop) / zone));
 
     panel.querySelectorAll('li').forEach(li => {
-      const mid = li.offsetTop - panel.scrollTop + li.offsetHeight / 2;
+      /* The fade reads from the centre of whatever part of the band is in
+         view, not the centre of the band itself. For a short entry those
+         are the same thing. For a band taller than the panel — a gallery
+         category carrying several photographs — the band's own centre can
+         sit far outside the panel while the band still fills the screen,
+         which would fade the whole thing out while it is being looked at.
+         Measuring the visible part instead keeps a tall band solid until it
+         is genuinely on its way past an edge. */
+      const y = li.offsetTop - panel.scrollTop;
+      const mid = (Math.max(0, y) + Math.min(h, y + li.offsetHeight)) / 2;
 
       const top = Math.max(0, Math.min(1, mid / zone));
       const bot = Math.max(0, Math.min(1, (h - mid) / zone));
