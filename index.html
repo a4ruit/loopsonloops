@@ -529,6 +529,44 @@
 
   .panel > * { direction: ltr; }
 
+  /* iOS draws its overlay indicator on the right whatever the writing
+     direction says, so on touch devices the native one is hidden and this
+     is drawn instead — on the left, and driven by the same scroll position
+     everything else reads. */
+  .bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    z-index: 3;
+    display: none;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .45s ease;
+  }
+
+  .bar.on { opacity: 1; }
+
+  .bar i {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    background: var(--fg);
+    opacity: .45;
+  }
+
+  @media (pointer: coarse) {
+    .bar { display: block; }
+
+    .panel {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .panel::-webkit-scrollbar { width: 0; height: 0; }
+  }
+
   .panel.active {
     opacity: 1;
     transform: none;
@@ -1068,6 +1106,7 @@
 
 <div class="stage" id="stage">
       <div class="dots" id="dots" aria-hidden="true"></div>
+      <div class="bar" id="bar" aria-hidden="true"><i></i></div>
       <p class="statement" id="statement"><span class="em">Visible / Invisible </span><span>is an interdisciplinary symposium exploring how </span><span class="em">animation, games &amp; interactive </span><span>practices reveal experiences, systems and meanings that remain hidden.</span></p>
 
       <section class="panel" data-panel="schedule">
@@ -2137,6 +2176,7 @@
     panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
     if (arriving !== caughtOn) caughtOn = null;
     dots.classList.toggle('on', !!name);
+    if (!name) bar.classList.remove('on');
     requestAnimationFrame(syncHold);
     for (const mark of dots.children) mark.classList.toggle('cur', mark.dataset.panel === name);
 
@@ -2205,9 +2245,27 @@
   const BAND_FADE = .3;    // fraction of the panel each edge fades over
   const BAND_BLUR = 7;     // px of blur at the very edge
 
+  const bar = document.getElementById('bar');
+  const barThumb = bar.firstElementChild;
+
+  function paintBar(panel) {
+    const h = panel.clientHeight;
+    const total = panel.scrollHeight;
+    if (!h || total - h < 4) { bar.classList.remove('on'); return; }
+
+    const ratio = h / total;
+    const height = Math.max(24, Math.round(h * ratio));
+    const top = Math.round((h - height) * (panel.scrollTop / (total - h)));
+
+    barThumb.style.height = height + 'px';
+    barThumb.style.top = top + 'px';
+    bar.classList.add('on');
+  }
+
   function paintBands(panel) {
     const h = panel.clientHeight;
     if (!h) return;
+    paintBar(panel);
     const zone = h * BAND_FADE;
     const max = panel.scrollHeight - h;
 
@@ -2306,13 +2364,13 @@
     const next = panel.scrollTop + (listTarget - panel.scrollTop) * (1 - Math.exp(-dt / LIST_TAU));
 
     if (Math.abs(listTarget - next) < .5) {
-      panel.scrollTop = listTarget;
+      panel.scrollTop = Math.round(listTarget);
       paintBands(panel);
       listRunning = false;
       return;
     }
 
-    panel.scrollTop = next;
+    panel.scrollTop = Math.round(next);
     paintBands(panel);
     requestAnimationFrame(listFrame);
   }
@@ -2431,7 +2489,7 @@
       // one to one with the finger: anything eased would feel detached
       // while it is still being dragged
       touchPanel = panel;
-      panel.scrollTop = Math.max(0, Math.min(max, panel.scrollTop + dy));
+      panel.scrollTop = Math.round(Math.max(0, Math.min(max, panel.scrollTop + dy)));
       paintBands(panel);
     } else {
       touchPanel = null;
