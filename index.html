@@ -2083,7 +2083,13 @@
   function hold() { clearTimeout(leaveTimer); }
 
   links.forEach(a => {
-    a.addEventListener('pointerenter', () => {
+    a.addEventListener('pointerenter', e => {
+      /* Hovering is a pointer-device idea. A tap fires pointerenter too,
+         but iOS may not fire the matching pointerleave until the next
+         interaction somewhere else — so `hovering` stayed set, and since
+         the scroll only changes panels when nothing is hovered, the whole
+         sequence stopped responding until the page was touched again. */
+      if (e.pointerType === 'touch') return;
       hold();
       hovering = a.dataset.panel;
       show(hovering);
@@ -2282,18 +2288,48 @@
   let touchT = 0;
   let touchV = 0;        // px per ms, smoothed
   let touchPanel = null; // whichever surface the drag is feeding
+  let touchFrom = 0;     // where the finger landed
+  let dragging = false;  // has this gesture become a scroll yet?
+
+  /* A tap is not a scroll. Calling preventDefault on the first flicker of
+     movement suppresses the click iOS would otherwise synthesise, so a tap
+     on a pill only ever registered as hover-in, hover-out — the panel
+     appeared and then closed itself 140ms later. Nothing is claimed until
+     the finger has travelled far enough to mean it. */
+  const DRAG_SLOP = 8;   // px
 
   window.addEventListener('touchstart', e => {
     touchY = e.touches.length === 1 ? e.touches[0].clientY : null;
+    touchFrom = touchY;
     touchT = performance.now();
     touchV = 0;
     touchPanel = null;
+    dragging = false;
+
+    // belt and braces: never let a stale hover outlive the gesture
+    if (hovering) { hovering = null; clearTimeout(leaveTimer); }
   }, { passive: true });
 
   window.addEventListener('touchmove', e => {
     if (touchY === null || e.touches.length !== 1) return;
 
     const y = e.touches[0].clientY;
+
+    // still within the slop: leave the gesture alone so a tap stays a tap
+    if (!dragging) {
+      if (Math.abs(touchFrom - y) < DRAG_SLOP) return;
+      dragging = true;
+      touchY = y;                          // start measuring from here
+      touchT = performance.now();
+
+      /* Deciding to scroll is rejoining the journey. Whatever a tap left
+         behind — a pin, or a pin that was never cleared because iOS never
+         delivered the click — is released here, so the scroll position is
+         always what decides the panel from this point on. */
+      if (pinned) { pinned = null; syncScrollPanel(scrollEased); }
+      return;
+    }
+
     const dy = touchY - y;                 // finger moving up = going down
     const now = performance.now();
     const gap = Math.max(1, now - touchT);
@@ -2335,7 +2371,8 @@
      the flick bounded. */
   window.addEventListener('touchend', () => {
     touchY = null;
-    const carry = touchV * FLING;
+    const carry = dragging ? touchV * FLING : 0;
+    dragging = false;
     touchV = 0;
     if (Math.abs(carry) < 4) { touchPanel = null; return; }
 
@@ -2353,7 +2390,7 @@
     touchPanel = null;
   }, { passive: true });
 
-  window.addEventListener('touchcancel', () => { touchY = null; touchV = 0; touchPanel = null; }, { passive: true });
+  window.addEventListener('touchcancel', () => { touchY = null; touchV = 0; touchPanel = null; dragging = false; }, { passive: true });
 
   /* ------------------------------------------------------------------
      SCROLL CAP
