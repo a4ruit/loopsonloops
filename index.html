@@ -34,6 +34,7 @@
     --accent: #36d469;      /* blocks: green on dark, lime on light */
     --accent-ink: #36d469;  /* accent type: green on dark, violet on light */
     --panel-bg: rgba(26, 26, 26, .62);
+    --plate: rgba(26, 26, 26, .74);   /* small surfaces that sit on the grid */
     --rule: rgba(255, 255, 255, .22);
     --rule-soft: rgba(255, 255, 255, .16);
     --guide: rgba(255, 255, 255, .07);
@@ -79,6 +80,7 @@
     --rule-soft: rgba(26, 26, 26, .16);
     --guide: rgba(26, 26, 26, .07);
     --panel-bg: rgba(255, 255, 255, .86);
+    --plate: rgba(241, 241, 241, .8);
     --pill-bg: #1a1a1a;
     --pill-fg: #ffffff;
     --accent-ink: #7328fa;
@@ -371,8 +373,15 @@
     display: flex;
     flex-direction: column;
     gap: .5rem;
+    /* the markers sit directly on the composition, so they carry their own
+       ground — a green block behind them would otherwise swallow both the
+       faint inactive ones and the green active one */
+    padding: .45rem .4rem;
+    background: var(--plate);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     opacity: 0;
-    transition: opacity .4s ease;
+    transition: opacity .4s ease, background-color .9s ease;
   }
 
   /* the stage itself ignores the pointer, so the rail has to opt back in */
@@ -381,22 +390,26 @@
   /* unreachable while the rail is hidden */
   .dots:not(.on) { pointer-events: none; }
 
-  .dots i:hover { background: rgba(255, 255, 255, .6); }
-  .dots i.cur:hover { background: var(--green); }
+  .dots i:hover { opacity: .75; }
+  .dots i.cur:hover { opacity: 1; }
 
   .dots i {
     display: block;
     width: 12px;
     height: 12px;
     cursor: pointer;
-    background: var(--line);
+    /* the foreground at a low opacity rather than a faint tint, so the
+       inactive markers keep their shape against any ground */
+    background: var(--fg);
+    opacity: .34;
     -webkit-mask: var(--shape) center / contain no-repeat;
             mask: var(--shape) center / contain no-repeat;
-    transition: background .35s ease, transform .35s ease;
+    transition: background .35s ease, opacity .35s ease, transform .35s ease;
   }
 
   .dots i.cur {
     background: var(--accent-ink);
+    opacity: 1;
     transform: scale(1.35);
   }
 
@@ -425,6 +438,7 @@
     letter-spacing: var(--track);
     /* the running text sits back so the emphasis can come forward */
     color: var(--fg-soft);
+
     pointer-events: none;
     transition: opacity .45s ease;
   }
@@ -436,6 +450,16 @@
   .statement .em {
     font-weight: 700;
     color: var(--accent-ink);
+  }
+
+  /* "interactive" lands where the composition often puts a green block,
+     and the emphasis green is that same green — so this one word carries a
+     halo of the ground colour to hold it off whatever is behind it */
+  .statement w.halo {
+    text-shadow:
+      0 0 2px var(--bg),
+      0 0 6px var(--bg),
+      0 0 14px var(--bg);
   }
 
   /* one word per span, so the sentence resolves as a continuous wipe
@@ -454,6 +478,11 @@
     position: absolute;
     inset: 0;
     overflow-y: auto;
+    /* the scrollbar follows the writing direction, so the container is
+       flipped to put it on the left and every child is flipped back —
+       without the second half, the grid columns and the text would
+       reverse along with it */
+    direction: rtl;
     /* chaining is managed by the wheel handler, not by the browser: the
        panel has to be able to hand the scroll back when it reaches its end */
     overscroll-behavior: auto;
@@ -497,6 +526,8 @@
   .panel.ruled .works li { padding: 2.25rem 0; }
 
   .panel.ruled li:last-child { border-bottom: 0; }
+
+  .panel > * { direction: ltr; }
 
   .panel.active {
     opacity: 1;
@@ -967,15 +998,16 @@
 
     .panel { padding: 1rem .9rem; }
 
-    /* each keeps its own scrollbar, with a gap between them so the two
-       do not read as one confused control */
-    .stage { padding: 0 1.5rem 0 .6rem; }
+    /* the panel's bar now sits on the opposite edge to the page's, so no
+       separating gap is needed between them */
+    .stage { padding: 0 .6rem; }
 
     /* the marker rail has no room beside a full-width panel */
     .dots {
-      top: -1.6rem;
+      top: -2rem;
       left: .6rem;
       flex-direction: row;
+      padding: .35rem .5rem;
     }
 
     /* schedule: one chronological column, each card saying where it is */
@@ -1899,7 +1931,7 @@
   const dots = document.getElementById('dots');
 
   let lastDir = 1;      // which way the last wheel event went
-  let pinned = null;    // clicked open, stays until dismissed
+  let pinned = null;    // holds the stage while a trip is travelling
   let hovering = null;  // previewed by the pointer, beats the scroll
   let leaveTimer;
 
@@ -1937,6 +1969,13 @@
       w.textContent = part;
       clause.appendChild(w);
       words.push({ el: w, o: -1, b: -1 });
+    }
+  }
+
+  // the one word that needs holding off the background
+  for (const w of words) {
+    if (w.el.textContent.replace(/[^a-z]/gi, '').toLowerCase() === 'interactive') {
+      w.el.classList.add('halo');
     }
   }
 
@@ -1989,16 +2028,24 @@
   }
 
   let scrollPanel = null;
+  let onStage = null;     // what the stage is actually showing, however it got there
 
   function syncScrollPanel(p) {
     let want = null;
     for (const s of SCROLL_PANELS) {
       if (p >= s.from && p <= s.to) { want = s.name; break; }
     }
-    if (want !== scrollPanel) {
-      scrollPanel = want;
-      if (!pinned && !hovering) show(scrollPanel);
-    }
+    scrollPanel = want;
+
+    /* Compare against what is actually on stage, not against the last
+       value this function worked out. A pill or a marker can put a panel
+       up without the scroll position changing, and then this function's
+       own cache still matches — so it would conclude there was nothing to
+       do and leave that panel up with no way to clear it. That is the
+       panel that sticks: it only happens when the stage was last set by
+       something other than the scroll. */
+    if (!pinned && !hovering && want !== onStage) show(want);
+
     paintStatement(p, !!(pinned || hovering || scrollPanel));
   }
 
@@ -2020,33 +2067,63 @@
      not flick through their panels, and the pin is released on arrival so
      the scroll takes the wheel again. */
 
-  let jumpPin = null;   // the panel held on stage while a jump is travelling
 
-  dots.addEventListener('click', e => {
-    const mark = e.target.closest('i');
-    if (!mark) return;
+  /* Going to a panel means going to its place in the journey, not showing
+     it where you happen to be standing. Holding a panel open at the wrong
+     scroll position leaves the stage and the page disagreeing, and every
+     later gesture has to arbitrate between them — so both the pills and
+     the markers travel instead.
 
-    const name = mark.dataset.panel;
+     The trip goes through the same governor as everything else. A native
+     smooth scroll would be pulled straight back by it, and the ground, the
+     patterns and the hero would stay where they were. */
+  function travelTo(name) {
     const range = SCROLL_PANELS.find(r => r.name === name);
     if (!range) return;
 
-    hovering = null;
-    pinned = name;            // holds the stage for the length of the trip
-    show(name);
-
-    /* The trip goes through the same governor everything else does. A
-       native smooth scroll would be pulled straight back by it — the page
-       would never actually move, so the ground, the patterns and the hero
-       would all stay wherever they were when the marker was clicked. */
     const travel = document.documentElement.scrollHeight - window.innerHeight;
-    const mid = (range.from + range.to) / 2;
-    capTarget = Math.max(0, Math.min(travel, travel * mid));
-    jumpPin = name;
-    capWake();
+    const dest = Math.max(0, Math.min(travel, travel * ((range.from + range.to) / 2)));
+
+    /* Arrive, rather than set off. The speed cap exists to stop the page
+       being skipped through by accident; an explicit click is not an
+       accident, and walking there at the capped rate meant up to nine
+       seconds of a pinned panel that could not be dismissed — the page was
+       still travelling, so going back only fought the trip that was still
+       queued. */
+    hovering = null;
+    pinned = null;
+    caughtOn = null;
+
+    capPos = capTarget = dest;
+    window.scrollTo(0, dest);
+
+    // the eased follower is snapped too, so the ground, the patterns and
+    // the panel all agree with the new position immediately instead of
+    // catching up to it over the next second
+    scrollTarget = scrollEased = travel > 0 ? dest / travel : 0;
+    paintPatterns(scrollEased);
+    paintGround(scrollEased);
+
+    lastDir = 1;
+    syncScrollPanel(scrollEased);
+
+    // and a panel asked for by name starts at the beginning of its list
+    const arriving = panels.find(x => x.dataset.panel === name);
+    if (arriving) {
+      arriving.scrollTop = 0;
+      if (listPanel === arriving) listTarget = 0;
+      paintBands(arriving);
+    }
+  }
+
+  dots.addEventListener('click', e => {
+    const mark = e.target.closest('i');
+    if (mark) travelTo(mark.dataset.panel);
   });
 
   // showing null clears the stage; anything else cross-fades to that panel
   function show(name) {
+    onStage = name || null;        // the single record of what is displayed
     const arriving = panels.find(p => p.dataset.panel === name);
     // a panel that is newly on stage starts at the edge the scroll came
     // from, so going down enters at the top of the list and coming back up
@@ -2058,6 +2135,7 @@
 
     links.forEach(a => a.classList.toggle('active', a.dataset.panel === name));
     panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+    if (arriving !== caughtOn) caughtOn = null;
     dots.classList.toggle('on', !!name);
     requestAnimationFrame(syncHold);
     for (const mark of dots.children) mark.classList.toggle('cur', mark.dataset.panel === name);
@@ -2097,13 +2175,7 @@
     a.addEventListener('click', e => {
       e.preventDefault();
       hold();
-      if (pinned === a.dataset.panel) {
-        pinned = null;
-        show(scrollPanel);
-      } else {
-        pinned = a.dataset.panel;
-        show(pinned);
-      }
+      travelTo(a.dataset.panel);
     });
   });
 
@@ -2306,6 +2378,14 @@
     touchPanel = null;
     dragging = false;
 
+    /* Catching a moving page stops it, as it would in any native scroller.
+       This also prevents the real fault behind the jitter: the fling
+       glide eases scrollTop every frame while a drag writes it directly,
+       so if a finger lands mid-glide both are writing the same property
+       and the list visibly oscillates between the two values. */
+    if (listPanel) { listTarget = listPanel.scrollTop; listPanel = null; }
+    capTarget = capPos;
+
     // belt and braces: never let a stale hover outlive the gesture
     if (hovering) { hovering = null; clearTimeout(leaveTimer); }
   }, { passive: true });
@@ -2409,6 +2489,7 @@
   const CAP_TAU = .28;      // how softly the page settles onto its target
   const FLING = 210;        // ms of travel a flick carries after the finger lifts
 
+  let caughtOn = null;   // the panel a glide has already been stopped by
   let capPos = window.scrollY;
   let capTarget = window.scrollY;
   let capLast = 0;
@@ -2432,15 +2513,36 @@
       capTarget = Math.max(capPos - CAP_LEAD, Math.min(capPos + CAP_LEAD, capTarget));
     }
 
+    /* Coasting after a flick fires no events, so the page would sail past
+       a panel that should have stopped it. The glide is caught once, and
+       its remaining travel handed to the list.
+
+       Only while coasting, and only once per panel: a drag already decides
+       this for itself in touchmove, and catching every frame would mean
+       the page could never leave a panel at all — it would be re-caught
+       the moment it tried, in either direction. */
+    const waiting = dragging ? null : heldPanel();
+    if (waiting && waiting !== caughtOn) {
+      const max = waiting.scrollHeight - waiting.clientHeight;
+      const dir = Math.sign(capTarget - capPos);
+      const room = dir > 0 ? waiting.scrollTop < max - 1 : waiting.scrollTop > 1;
+
+      if (dir !== 0 && room) {
+        const carry = capTarget - capPos;
+        capTarget = capPos;
+        capRunning = false;
+        caughtOn = waiting;
+
+        listPanel = waiting;
+        listTarget = Math.max(0, Math.min(max, waiting.scrollTop + carry));
+        listWake(waiting);
+        return;
+      }
+    }
+
     const diff = capTarget - capPos;
     if (Math.abs(diff) < .5) {
       capRunning = false;
-      if (jumpPin) {
-        // arrived: hand the stage back to the scroll position
-        if (pinned === jumpPin) pinned = null;
-        jumpPin = null;
-        syncScrollPanel(scrollEased);
-      }
       return;
     }
 
