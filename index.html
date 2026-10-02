@@ -979,10 +979,35 @@
     align-items: center;
     gap: 1.6rem;
     pointer-events: none;
-    opacity: .45;
   }
 
+  /* each mark is a link out. The quietness lives on the marks themselves
+     rather than on the row, so a hovered one can come up to full strength —
+     opacity on the container would cap its children. */
+  .marks a {
+    display: block;
+    pointer-events: auto;
+    opacity: .45;
+    transition: opacity .3s ease;
+  }
+
+  .marks a:hover,
+  .marks a:focus-visible { opacity: 1; }
+
   .marks img { display: block; }
+
+  /* the Instagram glyph is drawn in the page's own ink, so it follows the
+     ground from dark to light with no second artwork and no inversion */
+  .marks .ig svg {
+    display: block;
+    width: 21px;
+    height: 21px;
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.9;
+  }
+
+  .marks .ig .dot { fill: var(--fg); stroke: none; }
 
   /* white artwork: inverted as the ground turns light */
   .marks .magi { height: 20px; transition: filter .9s ease; }
@@ -1123,6 +1148,7 @@
 
     .marks { right: 1rem; bottom: 1rem; gap: .9rem; }
     .marks .magi { height: 14px; }
+    .marks .ig svg { width: 15px; height: 15px; }
     .marks .rmit { height: 21px; }
     :root.lit .marks .rmit { filter: none; }
 
@@ -1348,7 +1374,7 @@
 <div class="eventinfo">
   <span class="date">OCTOBER 28TH &middot; 2:30 - 7PM</span>
   <span class="place">Kaleide Theatre &amp; Megaplex 1, 2, 3</span>
-  <span class="place">RMIT Melbourne</span>
+  <span class="place">RMIT City Campus, Melbourne</span>
 </div>
 
 <div class="patterns" id="patterns" aria-hidden="true"></div>
@@ -1370,9 +1396,23 @@
 </div>
 
 <div class="marks">
-  <img class="magi" src="media/logo/magi-logo-white.png" alt="MAGI" />
+  <a class="ig" href="https://www.instagram.com/iesmagi/" target="_blank" rel="noopener" aria-label="Infinite Echoes Symposium on Instagram">
+    <!-- drawn rather than placed: it takes its colour from the page, so it
+         needs no second artwork for the light ground -->
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" />
+      <circle cx="12" cy="12" r="4.75" />
+      <circle class="dot" cx="17.6" cy="6.4" r="1.25" />
+    </svg>
+  </a>
   <span class="rule"></span>
-  <img class="rmit" src="media/logo/rmit-logo-black.png" alt="RMIT University" />
+  <a href="https://rmitmagi.com/" target="_blank" rel="noopener">
+    <img class="magi" src="media/logo/magi-logo-white.png" alt="MAGI" />
+  </a>
+  <span class="rule"></span>
+  <a href="https://www.rmit.edu.au/study-with-us/levels-of-study/postgraduate-study/masters-by-coursework/master-of-animation-games-and-interactivity-mc232" target="_blank" rel="noopener">
+    <img class="rmit" src="media/logo/rmit-logo-black.png" alt="RMIT University" />
+  </a>
 </div>
 
 <script>
@@ -1793,7 +1833,6 @@
 
     scrollEased += (scrollTarget - scrollEased) * (1 - Math.exp(-dt / SCROLL_TAU));
     paintPatterns(scrollEased);
-  paintGround(scrollEased);
     paintGround(scrollEased);
     syncScrollPanel(scrollEased);
 
@@ -1837,7 +1876,9 @@
 
   // where the veil begins, measured once rather than every frame
   let veilTop = 0;
-  function measureVeil() { veilTop = veil.getBoundingClientRect().top; }
+  function measureVeil() {
+    veilTop = veil.getBoundingClientRect().top;
+  }
   measureVeil();
   window.addEventListener('resize', measureVeil);
   let wroteX = -1, wroteY = -1, wroteR = -1;
@@ -1871,6 +1912,7 @@
     if (x !== wroteX) { veil.style.setProperty('--lens-x', x + 'px'); wroteX = x; }
     if (y !== wroteY) { veil.style.setProperty('--lens-y', y + 'px'); wroteY = y; }
     if (r !== wroteR) { veil.style.setProperty('--lens-r', r + 'px'); wroteR = r; }
+
 
     // closed and settled: stop burning frames until the pointer returns
     if (lens.tr === 0 && lens.r < .5) {
