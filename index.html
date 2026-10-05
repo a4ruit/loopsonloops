@@ -52,6 +52,10 @@
     --blur-end: 100%;
     --blur-max: 22px;
     --blur-span: calc(var(--blur-end) - var(--blur-start));
+
+    /* the massing's fog. The patches themselves are measured from the
+       buildings on screen; this is only how heavy the haze over them gets. */
+    --fog-max: 14px;
     /* hero placement, in grid cells */
     --hero-col: 2;
     --hero-row: 6;
@@ -100,7 +104,7 @@
   html {
     /* the composition is fixed; this is the runway the patterns are timed
        against. --scroll-len is how far the page travels, in viewports. */
-    --scroll-len: 800vh;
+    --scroll-len: 1100vh;
     scroll-behavior: auto;
   }
 
@@ -968,6 +972,100 @@
 
   .brand .wordmark span { display: block; }
 
+  /* the massing -------------------------------------------------------
+     The stage is empty until the introduction starts, so it holds the site
+     instead: the surrounding buildings drop into place, then the venue
+     arrives among them. It clears before the first word of the statement,
+     so the two never share the space. */
+  .scene {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--scene-o, 1);
+
+    /* This is what keeps the haze off the page. A backdrop filter blurs
+       whatever has been painted beneath it within its BACKDROP ROOT, and
+       isolating this element makes that root the canvas alone — so the fog
+       layers inside can only reach the buildings, never the grid behind
+       them. Without it the root is the page and the blur leaks out as a
+       visible disc over everything. */
+    isolation: isolate;
+  }
+
+  .scene canvas { display: block; width: 100%; height: 100%; }
+
+  /* The page's progressive blur, broken into patches: the haze gathers
+     over each surrounding building rather than passing across the block as
+     one wash, and the venue is left clear. The patches themselves are
+     measured from the buildings on screen and handed over by the module;
+     until it has done so, these blur nothing at all. */
+  .scene i {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  .scene i:nth-of-type(1) {
+    backdrop-filter: blur(calc(var(--fog-max) * .45));
+    -webkit-backdrop-filter: blur(calc(var(--fog-max) * .45));
+    -webkit-mask-image: var(--fog-wide, linear-gradient(transparent, transparent));
+            mask-image: var(--fog-wide, linear-gradient(transparent, transparent));
+  }
+
+  .scene i:nth-of-type(2) {
+    backdrop-filter: blur(var(--fog-max));
+    -webkit-backdrop-filter: blur(var(--fog-max));
+    -webkit-mask-image: var(--fog-core, linear-gradient(transparent, transparent));
+            mask-image: var(--fog-core, linear-gradient(transparent, transparent));
+  }
+
+  /* the street names, standing on the ground plane in perspective */
+  .ground {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .street {
+    font-family: var(--type);
+    font-size: 64px;              /* scaled down into world units in JS */
+    font-weight: 400;
+    letter-spacing: .09em;
+    color: var(--fg);
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  /* the annotations: a hairline leader off each building, set in the same
+     small interface type as the rest of the page's labelling */
+  .annot {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .annot polyline {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1;
+  }
+
+  .annot text {
+    fill: var(--fg);
+    font-family: var(--type);
+    font-size: var(--ui);
+    letter-spacing: var(--track);
+    dominant-baseline: middle;
+  }
+
+  /* the venue names itself more firmly than its neighbours do */
+  .annot .here text { font-weight: 700; }
+  .annot .here polyline { stroke-width: 1.4; }
+
   /* institutional marks --------------------------------------------- */
 
   .marks {
@@ -1171,6 +1269,24 @@
 </div>
 
 <div class="stage" id="stage">
+      <!-- the massing of the site, assembling itself before the
+           introduction begins. See the module at the end of the file. -->
+      <!-- The fog layers live INSIDE the scene, which is isolated. A
+           backdrop filter blurs whatever has been painted beneath it within
+           its backdrop root — so isolating the scene makes that root the
+           canvas alone, and the haze falls on the buildings instead of on
+           the page behind them. -->
+      <div class="scene" id="scene" aria-hidden="true">
+        <canvas id="scene-c"></canvas>
+        <i></i><i></i>
+        <!-- the street names and the annotations come after the fog, so it
+             cannot blur them: a backdrop filter only reaches what was
+             painted before it. The streets are still drawn in perspective,
+             as elements standing on the ground plane. -->
+        <div class="ground" id="ground"></div>
+        <svg class="annot" id="annot"></svg>
+      </div>
+
       <div class="dots" id="dots" aria-hidden="true"></div>
       <div class="bar" id="bar" aria-hidden="true"><i></i></div>
       <p class="statement" id="statement"><span class="em">Visible / Invisible </span><span>is an interdisciplinary symposium exploring how </span><span class="em">animation, games &amp; interactive </span><span>practices reveal experiences, systems and meanings that remain hidden.</span></p>
@@ -1775,8 +1891,8 @@
      page changes ground, and both the gallery and the whole of the credits
      are then read in the light palette. Ending it inside the gallery
      rather than the credits is what gives the change room to be noticed. */
-  const LIGHT_FROM = .74;   // halfway through the projects list
-  const LIGHT_TO   = .855;  // settled early in the gallery
+  const LIGHT_FROM = .76;   // halfway through the projects list
+  const LIGHT_TO   = .865;  // settled early in the gallery
 
   // the two grounds, surface by surface
   const DARK  = { bg:'#1a1a1a', fg:'#ffffff', accent:'#36d469', ink:'#36d469', pillBg:'#ffffff', pillFg:'#1a1a1a' };
@@ -1827,6 +1943,20 @@
   let scrollLast = 0;
   let scrollRunning = false;
 
+  /* The massing at the top of the page is drawn by the module at the end
+     of the file, which loads later than this script. It is driven from
+     here all the same, so it reads the same eased, speed-capped position
+     everything else does rather than the raw scroll underneath it — two
+     clocks on one journey is what makes a page feel disjointed. */
+  function paintScene(p) {
+    if (window.__massing) window.__massing.sync(p);
+  }
+
+  // and the module asks for the current position when it finishes loading,
+  // so it arrives already in step rather than at the top of a page that
+  // has moved on
+  window.__progress = () => scrollEased;
+
   function scrollFrame(now) {
     const dt = Math.min((now - scrollLast) / 1000, 1 / 30);
     scrollLast = now;
@@ -1834,12 +1964,14 @@
     scrollEased += (scrollTarget - scrollEased) * (1 - Math.exp(-dt / SCROLL_TAU));
     paintPatterns(scrollEased);
     paintGround(scrollEased);
+    paintScene(scrollEased);
     syncScrollPanel(scrollEased);
 
     if (Math.abs(scrollTarget - scrollEased) < .0002) {
       scrollEased = scrollTarget;
       paintPatterns(scrollEased);
       paintGround(scrollEased);
+      paintScene(scrollEased);
       syncScrollPanel(scrollEased);
       scrollRunning = false;
       return;
@@ -2067,20 +2199,23 @@
      until you let go, and the scroll position resumes from wherever it
      has got to. */
   const SCROLL_PANELS = [
-    { name: 'schedule', from: .44, to: .55 },
-    { name: 'speakers', from: .57, to: .67 },
-    { name: 'projects', from: .69, to: .79 },
+    { name: 'schedule', from: .52, to: .61 },
+    { name: 'speakers', from: .63, to: .71 },
+    { name: 'projects', from: .73, to: .81 },
     /* the gallery now carries two categories of photographs rather than one
        image, so it holds the stage longer than the lists either side of it */
-    { name: 'gallery',  from: .81, to: .90 },
-    { name: 'credits',  from: .915, to: 1 }
+    { name: 'gallery',  from: .83, to: .91 },
+    { name: 'credits',  from: .925, to: 1 }
   ];
 
-  /* The statement comes first, resolving word by word across the whole
-     paragraph as one continuous sentence, then clearing before SCHEDULE. */
-  const STATEMENT_FROM = .03;
-  const STATEMENT_TO   = .32;
-  const STATEMENT_OUT  = .40;
+  /* The massing assembles first, over the opening of the scroll; the
+     statement takes the stage once it has cleared, resolving word by word
+     across the whole paragraph as one continuous sentence, then clearing
+     before SCHEDULE. The massing's own band is set in the module at the
+     end of the file, and ends where this begins. */
+  const STATEMENT_FROM = .28;
+  const STATEMENT_TO   = .44;
+  const STATEMENT_OUT  = .50;
   const STATEMENT_EDGE = 5;    // words in the soft leading edge of the wipe
 
   const statement = document.getElementById('statement');
@@ -2771,6 +2906,15 @@
   }, { passive: true });
 
 </script>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module" src="massing.js"></script>
 
 <div class="runway" aria-hidden="true"></div>
 
