@@ -20,9 +20,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-/* the street names are real HTML standing on the ground plane: that keeps
-   them out of the canvas, and so out of reach of the fog that blurs it,
-   while still taking the same perspective the buildings do */
+/* the street names are real HTML standing on the ground plane, so they are
+   set in the page's own type and stay sharp at any zoom, while still taking
+   the same perspective the buildings do */
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
 /* ======================================================================
@@ -61,21 +61,6 @@ const STREET = {
      same world units the models are built in. */
   LONG:  { TEXT: 'Swanston St', SIZE: .35, ANGLE: 22, OFFSET: -30, SHIFT: 40 },
   SHORT: { TEXT: 'La Trobe St', SIZE: .42, ANGLE: 21, OFFSET: -2, SHIFT: 40 }
-};
-
-/* THE FOG.
-   Patches of haze gathered around the outside of the complex, thinning
-   toward its middle, so the block's edges dissolve into the page while the
-   venue at its centre stays clear. They are scattered rather than placed,
-   but from a fixed seed — the same arrangement every visit, so it reads as
-   a property of the site rather than as something flickering about. How
-   heavy the blur itself gets is --fog-max in the stylesheet. */
-const FOG = {
-  COUNT: 16,     // how many patches ring the complex
-  REACH: 1,      // where they sit, as a share of the block's extent on screen
-  DRIFT: .34,    // how far in from that ring they are allowed to wander
-  SIZE: .3,      // a patch's radius, as a share of the block's
-  VARY: .5       // how much the patches differ in size
 };
 
 /* HOW THE BUILDINGS ARE DRAWN.
@@ -140,14 +125,22 @@ const BAND = {
   const canvas = document.getElementById('scene-c');
   if (!holder || !canvas) return;
 
-  // the fog now lives inside the scene, so the scene alone carries the fade
-  const layers = [holder];
 
   const { FALL, STAGGER, SETTLE, VENUE, DROP } = BEATS;
   const { FROM: SCENE_FROM, TO: SCENE_TO, HOLD: SCENE_HOLD, OUT: SCENE_OUT } = BAND;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  /* A phone is doing far more per frame than a laptop and has far less to
+     do it with, so it gets a cheaper version of the same scene rather than
+     the same one running badly. */
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !coarse });
+  /* The cost of a frame is the pixel count, and a phone's device ratio is
+     commonly 3. Capping at 2 there still means four times the pixels of a
+     1x screen for a drawing this small; 1.5 is two and a quarter, and the
+     outlines carry the form well enough that the difference barely shows. */
+  renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.5 : 2));
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(VIEW.FOV, 1, .1, 100000);
@@ -307,7 +300,7 @@ const BAND = {
        the widest of them reaches the edge of the frame. */
     bounds = { box: union, mid };
     // laid after the block is measured, so the street names cannot enlarge
-    // the box the camera and the fog are both framed against
+    // the box the camera is framed against
     layStreets(union, size, mid);
     reframe();
 
@@ -368,7 +361,6 @@ const BAND = {
     const d = frameDist(bounds.box, bounds.mid, 480);
     camera.position.copy(aim.clone().multiplyScalar(d).add(bounds.mid));
     camera.lookAt(bounds.mid);
-    measureFog();
   }
 
   /* THE STREETS
@@ -620,56 +612,6 @@ const BAND = {
     return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, rx: (x1 - x0) / 2, ry: (y1 - y0) / 2 };
   }
 
-  /* a small fixed-seed generator, so the scatter is irregular but identical
-     on every visit and on every re-measure */
-  function seeded(seed) {
-    return () => {
-      seed = (seed + 0x6d2b79f5) | 0;
-      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-
-  /* The fog is not one wash over the block but many small patches ringing
-     it, each measured against where the complex actually falls on the
-     canvas. Ringing it is the point: the haze is dense around the outside,
-     thins as it works inward, and never reaches the venue at the centre —
-     the block dissolves at its edges and resolves at its subject.
-
-     CSS composites a list of mask layers by addition, so overlapping
-     patches simply build up into a heavier bank of fog. */
-  function measureFog() {
-    if (!bounds) return;
-    camera.updateMatrixWorld(true);
-
-    const s = onScreen(bounds.box);
-    const rnd = seeded(20261028);
-    const wide = [], core = [];
-
-    for (let i = 0; i < FOG.COUNT; i++) {
-      // stepped around the ring rather than placed at random, so no stretch
-      // of the perimeter is left bare, then nudged off that step
-      const a = (i + (rnd() - .5) * .8) / FOG.COUNT * Math.PI * 2;
-      const out = FOG.REACH * (1 - FOG.DRIFT * rnd());
-
-      const cx = s.cx + s.rx * out * Math.cos(a);
-      const cy = s.cy + s.ry * out * Math.sin(a);
-      const size = FOG.SIZE * (1 + FOG.VARY * (rnd() - .5) * 2);
-
-      const at = (k) => 'radial-gradient(ellipse ' +
-        (s.rx * size * k).toFixed(2) + '% ' + (s.ry * size * k).toFixed(2) + '% at ' +
-        cx.toFixed(2) + '% ' + cy.toFixed(2) + '%, ' +
-        '#000 0%, rgba(0,0,0,.5) 50%, transparent 100%)';
-
-      wide.push(at(1));
-      core.push(at(.6));
-    }
-
-    holder.style.setProperty('--fog-wide', wide.join(', '));
-    holder.style.setProperty('--fog-core', core.join(', '));
-  }
-
   /* easing: fast arrival, soft landing, no overshoot */
   const outCubic = t => 1 - Math.pow(1 - t, 3);
   const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -780,7 +722,15 @@ const BAND = {
     requestAnimationFrame(breatheFrame);
   }
 
+  /* The breath is the only thing here that redraws without the page
+     moving. On a phone that is a WebGL pass competing with the scroll on
+     every frame, for an ambient effect nobody is holding still to watch —
+     so a touch device gets the massing without it, and the outlines simply
+     hold steady. Anyone asking for less motion gets the same. */
+  const breathes = BREATHE.DEPTH > 0 && !coarse && !calm;
+
   function setBreathing(on) {
+    if (!breathes) on = false;
     if (on === breathing) return;
     breathing = on;
     if (on) requestAnimationFrame(breatheFrame);
@@ -790,13 +740,10 @@ const BAND = {
     // fading out is its own, later part of the band
     const v = Math.round(clamp01((SCENE_OUT - p) / (SCENE_OUT - SCENE_HOLD)) * 100) / 100;
     if (v !== wroteO) {
-      layers.forEach(el => {
-        el.style.setProperty('--scene-o', v);
-        /* off the stage entirely once clear. This matters more for the fog
-           than for the canvas: a backdrop filter at zero opacity still
-           costs a blur pass over the whole region on every frame. */
-        el.style.visibility = v > 0 ? '' : 'hidden';
-      });
+      holder.style.setProperty('--scene-o', v);
+      // off the stage entirely once clear, so it cannot sit over the
+      // introduction as an invisible layer
+      holder.style.visibility = v > 0 ? '' : 'hidden';
       wroteO = v;
     }
 

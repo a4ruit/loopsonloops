@@ -53,9 +53,6 @@
     --blur-max: 22px;
     --blur-span: calc(var(--blur-end) - var(--blur-start));
 
-    /* the massing's fog. The patches themselves are measured from the
-       buildings on screen; this is only how heavy the haze over them gets. */
-    --fog-max: 14px;
     /* hero placement, in grid cells */
     --hero-col: 2;
     --hero-row: 6;
@@ -564,6 +561,29 @@
   @media (pointer: coarse) {
     .bar { display: block; }
 
+    /* THE BLUR, ON A PHONE.
+       Each backdrop-filter re-samples everything beneath it, every frame
+       that anything moves — and three of them stacked is three full
+       passes over the lower half of the screen on every scroll frame.
+       On a desktop GPU that is affordable; on a phone it is the single
+       most expensive thing on the page, and it competes for the frame
+       with the scroll itself, which is what shows up as stutter.
+
+       One layer reads as the same soft bottom. There is also no cursor on
+       a touch screen, so the lens these masks subtract never opens —
+       leaving it in costs a second mask layer per blur for an effect that
+       can never appear. */
+    .veil i:nth-child(1),
+    .veil i:nth-child(2) { display: none; }
+
+    .veil i:nth-child(3) {
+      backdrop-filter: blur(calc(var(--blur-max) * .72));
+      -webkit-backdrop-filter: blur(calc(var(--blur-max) * .72));
+      mask-image: linear-gradient(to bottom, transparent 0%, #000 72%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 72%);
+      mask-composite: add;
+    }
+
     .panel {
       scrollbar-width: none;
       -ms-overflow-style: none;
@@ -652,15 +672,18 @@
 
   .locs-head span { padding-left: .5rem; }
 
-  .gap { padding-left: .5rem; }
-
-  /* 2:30 to 7:30 in quarter hours */
-  .locs { grid-template-rows: repeat(20, minmax(15px, auto)); }
+  /* 2:15 to 7:45 in quarter hours */
+  .locs { grid-template-rows: repeat(22, minmax(15px, auto)); }
 
   .card {
     /* inset from the column rules on either side */
     margin: 0 .4rem 0 .5rem;
+    /* Paper first, so a browser without color-mix still gets a readable
+       card rather than nothing; the wash is painted over it. */
     background: var(--paper);
+    background-image: linear-gradient(158deg,
+      color-mix(in srgb, var(--cat) 17%, var(--paper)) 0%,
+      color-mix(in srgb, var(--cat) 3%, var(--paper)) 100%);
     color: var(--ink);
     transition: background-color .9s ease, color .9s ease;
     /* no padding on the card itself: the bar runs corner to corner and
@@ -675,10 +698,13 @@
     --cat-ink: var(--paper);
   }
 
-  .card.keynote  { --cat: #1a1a1a; }
+  /* the colours the planning sheet gives each kind of session */
+  .card.keynote  { --cat: #c2610a; }
+  .card.setup    { --cat: #2fa85a; }
+  .card.showcase { --cat: #8a6a52; }
   .card.demo     { --cat: #c2185b; }
-  .card.showcase { --cat: #2fa85a; }
-  .card.social   { --cat: #5a5a5a; }
+  .card.social   { --cat: #6b4fb8; }
+  .card.packup   { --cat: #b4257f; }
 
   /* one bar across the top of every card: grey under the time, easing
      across into that session type's colour under the tag */
@@ -688,6 +714,11 @@
     justify-content: space-between;
     gap: .35rem;
     background: rgba(26, 26, 26, .14);
+    /* the bar now does what it always said it did: neutral under the time,
+       easing across into that session type's colour as it reaches the tag */
+    background-image: linear-gradient(to right,
+      color-mix(in srgb, var(--cat) 7%, #e4e4e4) 0%,
+      color-mix(in srgb, var(--cat) 28%, #e4e4e4) 100%);
   }
 
   .card .time {
@@ -716,24 +747,29 @@
   /* the column heading already says where; only the stacked view needs it */
   .card .where { display: none; }
 
-  /* breaks are the empty rows; this just names them, sitting in the gap
-     rather than filling it with another card */
-  .gap {
-    grid-column: 1 / -1;
+  /* A break belongs to a room, not to the whole hall: the theatre breaks
+     while a MegaFlex is mid-talk, and the live demo runs straight through
+     two of them. So they are drawn in their own column rather than as a
+     band across all four. */
+  .brk {
+    margin: 0 .4rem 0 .5rem;
     display: flex;
     align-items: center;
-    gap: .5rem;
+    justify-content: center;
+    background: rgba(63, 111, 216, .22);
+    font-size: 9px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    opacity: .7;
+  }
+
+  .cap {
+    margin: .9rem 0 0;
+    padding-left: .5rem;
     font-size: 9px;
     letter-spacing: .16em;
     text-transform: uppercase;
     opacity: .45;
-  }
-
-  .gap i {
-    flex: 1;
-    height: 1px;
-    background: currentColor;
-    opacity: .5;
   }
 
   .card .who { letter-spacing: var(--track); }
@@ -939,6 +975,27 @@
 
   .eventinfo span { display: block; }
   .eventinfo .date { font-weight: 700; color: var(--accent-ink); }
+
+  /* the one thing in this corner anyone has to act on, so it is the one
+     thing here that is clickable — the block above it stays inert */
+  .tickets {
+    display: inline-block;
+    margin-top: .55rem;
+    padding: .3rem .7rem;
+    pointer-events: auto;
+    border: 1px solid var(--fg);
+    color: var(--fg);
+    font-weight: 700;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: background-color .25s ease, color .25s ease, border-color .9s ease;
+  }
+
+  .tickets:hover,
+  .tickets:focus-visible {
+    background: var(--fg);
+    color: var(--bg);
+  }
   .eventinfo .place { opacity: .7; }
 
   /* IES mark, bottom left --------------------------------------------
@@ -983,42 +1040,9 @@
     z-index: 0;
     pointer-events: none;
     opacity: var(--scene-o, 1);
-
-    /* This is what keeps the haze off the page. A backdrop filter blurs
-       whatever has been painted beneath it within its BACKDROP ROOT, and
-       isolating this element makes that root the canvas alone — so the fog
-       layers inside can only reach the buildings, never the grid behind
-       them. Without it the root is the page and the blur leaks out as a
-       visible disc over everything. */
-    isolation: isolate;
   }
 
   .scene canvas { display: block; width: 100%; height: 100%; }
-
-  /* The page's progressive blur, broken into patches: the haze gathers
-     over each surrounding building rather than passing across the block as
-     one wash, and the venue is left clear. The patches themselves are
-     measured from the buildings on screen and handed over by the module;
-     until it has done so, these blur nothing at all. */
-  .scene i {
-    position: absolute;
-    inset: 0;
-    display: block;
-  }
-
-  .scene i:nth-of-type(1) {
-    backdrop-filter: blur(calc(var(--fog-max) * .45));
-    -webkit-backdrop-filter: blur(calc(var(--fog-max) * .45));
-    -webkit-mask-image: var(--fog-wide, linear-gradient(transparent, transparent));
-            mask-image: var(--fog-wide, linear-gradient(transparent, transparent));
-  }
-
-  .scene i:nth-of-type(2) {
-    backdrop-filter: blur(var(--fog-max));
-    -webkit-backdrop-filter: blur(var(--fog-max));
-    -webkit-mask-image: var(--fog-core, linear-gradient(transparent, transparent));
-            mask-image: var(--fog-core, linear-gradient(transparent, transparent));
-  }
 
   /* the street names, standing on the ground plane in perspective */
   .ground {
@@ -1228,7 +1252,7 @@
       opacity: .5;
     }
 
-    .gap { margin: .9rem 0 .5rem; }
+    .brk { display: none; }
 
     .speakers li { font-size: clamp(1rem, 5vmin, 1.4rem); }
     .works .thumb, .works .frame { width: 100%; max-width: none; }
@@ -1271,18 +1295,10 @@
 <div class="stage" id="stage">
       <!-- the massing of the site, assembling itself before the
            introduction begins. See the module at the end of the file. -->
-      <!-- The fog layers live INSIDE the scene, which is isolated. A
-           backdrop filter blurs whatever has been painted beneath it within
-           its backdrop root — so isolating the scene makes that root the
-           canvas alone, and the haze falls on the buildings instead of on
-           the page behind them. -->
       <div class="scene" id="scene" aria-hidden="true">
         <canvas id="scene-c"></canvas>
-        <i></i><i></i>
-        <!-- the street names and the annotations come after the fog, so it
-             cannot blur them: a backdrop filter only reaches what was
-             painted before it. The streets are still drawn in perspective,
-             as elements standing on the ground plane. -->
+        <!-- the street names stand on the ground plane in perspective; the
+             annotations are flat over the top of it -->
         <div class="ground" id="ground"></div>
         <svg class="annot" id="annot"></svg>
       </div>
@@ -1298,82 +1314,114 @@
         </div>
 
         <div class="locs">
-          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 1 / span 3;">
+          <div class="card setup" style="grid-column: 2 / span 1; grid-row: 1 / span 4;">
+            <div class="top"><span class="time">2:15 – 3:15</span><span class="tag">Set up</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Room preparation</span></div>
+          </div>
+          <div class="card setup" style="grid-column: 3 / span 1; grid-row: 1 / span 4;">
+            <div class="top"><span class="time">2:15 – 3:15</span><span class="tag">Set up</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Room preparation</span></div>
+          </div>
+          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 2 / span 3;">
             <div class="top"><span class="time">2:30 – 3:15</span><span class="tag">Keynote</span></div>
-            <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Opening address</span></div>
+            <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Deb Polson</span></div>
           </div>
-          <div class="gap" style="grid-row: 4 / span 1;"><span>3:15 Break</span><i></i></div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 5 / span 2;">
-            <div class="top"><span class="time">3:30 – 4:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student A</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          <div class="brk" style="grid-column: 1 / span 1; grid-row: 5 / span 2;"><span>Break</span></div>
+          <div class="brk" style="grid-column: 2 / span 1; grid-row: 5 / span 1;"><span>Break</span></div>
+          <div class="brk" style="grid-column: 3 / span 1; grid-row: 5 / span 1;"><span>Break</span></div>
+          <div class="card showcase" style="grid-column: 1 / span 1; grid-row: 7 / span 5;">
+            <div class="top"><span class="time">3:45 – 5:00</span><span class="tag">Showcase</span></div>
+            <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Animation &amp; video essays</span> <span class="dot">&#9679;</span> <span class="what">On loop, drop in</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 5 / span 2;">
-            <div class="top"><span class="time">3:30 – 4:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student D</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 6 / span 1;">
+            <div class="top"><span class="time">3:30 – 3:45</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Sofia Moshkina</span></div>
           </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 7 / span 2;">
-            <div class="top"><span class="time">4:00 – 4:30</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student B</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 6 / span 1;">
+            <div class="top"><span class="time">3:30 – 3:45</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Otis Nguyen</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 7 / span 2;">
-            <div class="top"><span class="time">4:00 – 4:30</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student E</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 7 / span 1;">
+            <div class="top"><span class="time">3:45 – 4:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Melinda Chen</span></div>
           </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 9 / span 2;">
-            <div class="top"><span class="time">4:30 – 5:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student C</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 7 / span 1;">
+            <div class="top"><span class="time">3:45 – 4:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Nathalynne</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 9 / span 2;">
-            <div class="top"><span class="time">4:30 – 5:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student F</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 8 / span 1;">
+            <div class="top"><span class="time">4:00 – 4:15</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Jeffrey Chieu</span></div>
           </div>
-          <div class="card showcase" style="grid-column: 4 / span 1; grid-row: 9 / span 6;">
-            <div class="top"><span class="time">4:30 – 6:00</span><span class="tag">Showcase</span></div>
-            <div class="body"><span class="where">MegaFlex 3</span><span class="who">Animation &amp; video essays</span> <span class="dot">&#9679;</span> <span class="what">On loop, drop in</span></div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 8 / span 1;">
+            <div class="top"><span class="time">4:00 – 4:15</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Sunny (Shengyang Zheng)</span></div>
           </div>
-          <div class="gap" style="grid-row: 11 / span 1;"><span>5:00 Break</span><i></i></div>
-          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 12 / span 3;">
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 9 / span 1;">
+            <div class="top"><span class="time">4:15 – 4:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Clarissa Dias</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 9 / span 1;">
+            <div class="top"><span class="time">4:15 – 4:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Alex Wang</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 10 / span 1;">
+            <div class="top"><span class="time">4:30 – 4:45</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Sarah Cohen</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 10 / span 1;">
+            <div class="top"><span class="time">4:30 – 4:45</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Caitlin Butt</span></div>
+          </div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 11 / span 1;">
+            <div class="top"><span class="time">4:45 – 5:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Cheren Hurst</span></div>
+          </div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 11 / span 1;">
+            <div class="top"><span class="time">4:45 – 5:00</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Yuchi Huang</span></div>
+          </div>
+          <div class="brk" style="grid-column: 1 / span 1; grid-row: 12 / span 1;"><span>Break</span></div>
+          <div class="brk" style="grid-column: 2 / span 1; grid-row: 12 / span 1;"><span>Break</span></div>
+          <div class="brk" style="grid-column: 3 / span 1; grid-row: 12 / span 1;"><span>Break</span></div>
+          <div class="card demo" style="grid-column: 4 / span 1; grid-row: 12 / span 8;">
+            <div class="top"><span class="time">5:00 – 7:00</span><span class="tag">Live demo</span></div>
+            <div class="body"><span class="where">MegaFlex 3</span><span class="who">Playtest floor</span> <span class="dot">&#9679;</span> <span class="what">Yuchi Huang, Jit Thong Ng, Yuna Jiang, Pita Khangngern, Jahanvi Boka</span></div>
+          </div>
+          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 13 / span 3;">
             <div class="top"><span class="time">5:15 – 6:00</span><span class="tag">Keynote</span></div>
-            <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Closing remarks</span> <span class="dot">&#9679;</span> <span class="what">Talks continue after</span></div>
+            <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Closing address</span> <span class="dot">&#9679;</span> <span class="what">Talks continue after</span></div>
           </div>
-          <div class="card social" style="grid-column: 2 / span 2; grid-row: 12 / span 3;">
+          <div class="card social" style="grid-column: 2 / span 2; grid-row: 13 / span 3;">
             <div class="top"><span class="time">5:15 – 6:00</span><span class="tag">Networking</span></div>
-            <div class="body"><span class="where">MegaFlex 1 &amp; 2</span><span class="who">Mingle space</span></div>
+            <div class="body"><span class="where">MegaFlex 1 &amp; 2</span><span class="who">Networking &amp; mingle space</span></div>
           </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 15 / span 2;">
-            <div class="top"><span class="time">6:00 – 6:30</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student G</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          <div class="brk" style="grid-column: 2 / span 1; grid-row: 16 / span 1;"><span>Break</span></div>
+          <div class="brk" style="grid-column: 3 / span 1; grid-row: 16 / span 1;"><span>Break</span></div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 17 / span 1;">
+            <div class="top"><span class="time">6:15 – 6:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Bingying Wang</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 15 / span 2;">
-            <div class="top"><span class="time">6:00 – 6:30</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student J</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 17 / span 1;">
+            <div class="top"><span class="time">6:15 – 6:30</span><span class="tag">Talk</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Esthefania Morantes Simanca</span></div>
           </div>
-          <div class="card demo" style="grid-column: 4 / span 1; grid-row: 15 / span 5;">
-            <div class="top"><span class="time">6:00 – 7:15</span><span class="tag">Live demo</span></div>
-            <div class="body"><span class="where">MegaFlex 3</span><span class="who">Playtest floor</span> <span class="dot">&#9679;</span> <span class="what">Games, open play</span></div>
+          <div class="card packup" style="grid-column: 2 / span 1; grid-row: 18 / span 2;">
+            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Pack up</span></div>
+            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Room clear</span></div>
           </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 17 / span 2;">
-            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student H</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
+          <div class="card packup" style="grid-column: 3 / span 1; grid-row: 18 / span 2;">
+            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Pack up</span></div>
+            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Room clear</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 17 / span 2;">
-            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student K</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 19 / span 1;">
-            <div class="top"><span class="time">7:00 – 7:15</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Student I</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 19 / span 1;">
-            <div class="top"><span class="time">7:00 – 7:15</span><span class="tag">Talk</span></div>
-            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Student L</span> <span class="dot">&#9679;</span> <span class="what">Project title</span></div>
-          </div>
-          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 20 / span 1;">
-            <div class="top"><span class="time">7:15 – 7:30</span><span class="tag">Close</span></div>
-            <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Thanks for coming</span></div>
+          <div class="card packup" style="grid-column: 4 / span 1; grid-row: 21 / span 2;">
+            <div class="top"><span class="time">7:15 – 7:45</span><span class="tag">Pack up</span></div>
+            <div class="body"><span class="where">MegaFlex 3</span><span class="who">Room clear</span></div>
           </div>
         </div>
-      </div>
+
+        <p class="cap">Kaleide Theatre holds 150. Each MegaFlex holds 30.</p>
+        </div>
       </section>
 
       <section class="panel ruled" data-panel="speakers">
@@ -1491,6 +1539,7 @@
   <span class="date">OCTOBER 28TH &middot; 2:30 - 7PM</span>
   <span class="place">Kaleide Theatre &amp; Megaplex 1, 2, 3</span>
   <span class="place">RMIT City Campus, Melbourne</span>
+  <a class="tickets" href="https://www.eventbrite.com/e/invisible-echoes-research-symposium-tickets-2003054215078?aff=oddtdtcreator" target="_blank" rel="noopener">Tickets &rarr;</a>
 </div>
 
 <div class="patterns" id="patterns" aria-hidden="true"></div>
