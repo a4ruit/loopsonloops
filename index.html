@@ -523,9 +523,9 @@
     filter: blur(var(--b, 0px));
   }
 
-  /* a project band carries a thumbnail as well, so it needs more room —
-     still equal top and bottom */
-  .panel.ruled .works li { padding: 2.25rem 0; }
+  /* a project band carries an author line under the title, but no longer a
+     thumbnail, so it sits on the same rhythm as a speaker */
+  .panel.ruled .works li { padding: 1.9rem 0; }
 
   .panel.ruled li:last-child { border-bottom: 0; }
 
@@ -672,8 +672,8 @@
 
   .locs-head span { padding-left: .5rem; }
 
-  /* 2:15 to 7:45 in quarter hours */
-  .locs { grid-template-rows: repeat(22, minmax(15px, auto)); }
+  /* 2:30 to 7:00 in quarter hours — the public part of the day */
+  .locs { grid-template-rows: repeat(18, minmax(15px, auto)); }
 
   .card {
     /* inset from the column rules on either side */
@@ -700,11 +700,9 @@
 
   /* the colours the planning sheet gives each kind of session */
   .card.keynote  { --cat: #c2610a; }
-  .card.setup    { --cat: #2fa85a; }
   .card.showcase { --cat: #8a6a52; }
   .card.demo     { --cat: #c2185b; }
   .card.social   { --cat: #6b4fb8; }
-  .card.packup   { --cat: #b4257f; }
 
   /* one bar across the top of every card: grey under the time, easing
      across into that session type's colour under the tag */
@@ -763,15 +761,6 @@
     opacity: .7;
   }
 
-  .cap {
-    margin: .9rem 0 0;
-    padding-left: .5rem;
-    font-size: 9px;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    opacity: .45;
-  }
-
   .card .who { letter-spacing: var(--track); }
   .card .dot { opacity: .45; }
   .card .what { color: var(--violet); }
@@ -805,9 +794,9 @@
     opacity: .55;
   }
 
-  /* the sheet's representative images live behind RMIT sign-in, so each
-     work holds an empty frame until they are exported into media/works/ */
-  .works .frame,
+  /* kept for when the works' own images are exported into media/works/;
+     until then a project is its title and its author, with no empty box
+     standing in for a picture that does not exist yet */
   .works .thumb {
     display: block;
     width: 200px;
@@ -817,8 +806,6 @@
     margin: .9rem auto 0;
     border: 1px solid var(--rule);
   }
-
-  .works .frame { background: rgba(255, 255, 255, .04); }
 
   .speakers sup {
     font-size: .4em;
@@ -1255,7 +1242,7 @@
     .brk { display: none; }
 
     .speakers li { font-size: clamp(1rem, 5vmin, 1.4rem); }
-    .works .thumb, .works .frame { width: 100%; max-width: none; }
+    .works .thumb { width: 100%; max-width: none; }
 
     /* side by side there is not enough width for either shot to read */
     .gallery .shots { display: block; }
@@ -1314,113 +1301,91 @@
         </div>
 
         <div class="locs">
-          <div class="card setup" style="grid-column: 2 / span 1; grid-row: 1 / span 4;">
-            <div class="top"><span class="time">2:15 – 3:15</span><span class="tag">Set up</span></div>
-            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Room preparation</span></div>
-          </div>
-          <div class="card setup" style="grid-column: 3 / span 1; grid-row: 1 / span 4;">
-            <div class="top"><span class="time">2:15 – 3:15</span><span class="tag">Set up</span></div>
-            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Room preparation</span></div>
-          </div>
-          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 2 / span 3;">
+          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 1 / span 3;">
             <div class="top"><span class="time">2:30 – 3:15</span><span class="tag">Keynote</span></div>
             <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Deb Polson</span></div>
           </div>
-          <div class="brk" style="grid-column: 1 / span 1; grid-row: 5 / span 2;"><span>Break</span></div>
-          <div class="brk" style="grid-column: 2 / span 1; grid-row: 5 / span 1;"><span>Break</span></div>
-          <div class="brk" style="grid-column: 3 / span 1; grid-row: 5 / span 1;"><span>Break</span></div>
-          <div class="card showcase" style="grid-column: 1 / span 1; grid-row: 7 / span 5;">
+          <div class="brk" style="grid-column: 1 / span 1; grid-row: 4 / span 2;"><span>Break</span></div>
+          <div class="brk" style="grid-column: 2 / span 1; grid-row: 4 / span 1;"><span>Break</span></div>
+          <div class="brk" style="grid-column: 3 / span 1; grid-row: 4 / span 1;"><span>Break</span></div>
+          <div class="card showcase" style="grid-column: 1 / span 1; grid-row: 6 / span 5;">
             <div class="top"><span class="time">3:45 – 5:00</span><span class="tag">Showcase</span></div>
             <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Animation &amp; video essays</span> <span class="dot">&#9679;</span> <span class="what">On loop, drop in</span></div>
           </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 6 / span 1;">
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 5 / span 1;">
             <div class="top"><span class="time">3:30 – 3:45</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 1</span><span class="who">Sofia Moshkina</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 6 / span 1;">
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 5 / span 1;">
             <div class="top"><span class="time">3:30 – 3:45</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 2</span><span class="who">Otis Nguyen</span></div>
           </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 7 / span 1;">
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 6 / span 1;">
             <div class="top"><span class="time">3:45 – 4:00</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 1</span><span class="who">Melinda Chen</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 7 / span 1;">
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 6 / span 1;">
             <div class="top"><span class="time">3:45 – 4:00</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 2</span><span class="who">Nathalynne</span></div>
           </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 8 / span 1;">
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 7 / span 1;">
             <div class="top"><span class="time">4:00 – 4:15</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 1</span><span class="who">Jeffrey Chieu</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 8 / span 1;">
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 7 / span 1;">
             <div class="top"><span class="time">4:00 – 4:15</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 2</span><span class="who">Sunny (Shengyang Zheng)</span></div>
           </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 9 / span 1;">
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 8 / span 1;">
             <div class="top"><span class="time">4:15 – 4:30</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 1</span><span class="who">Clarissa Dias</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 9 / span 1;">
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 8 / span 1;">
             <div class="top"><span class="time">4:15 – 4:30</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 2</span><span class="who">Alex Wang</span></div>
           </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 10 / span 1;">
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 9 / span 1;">
             <div class="top"><span class="time">4:30 – 4:45</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 1</span><span class="who">Sarah Cohen</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 10 / span 1;">
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 9 / span 1;">
             <div class="top"><span class="time">4:30 – 4:45</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 2</span><span class="who">Caitlin Butt</span></div>
           </div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 11 / span 1;">
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 10 / span 1;">
             <div class="top"><span class="time">4:45 – 5:00</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 1</span><span class="who">Cheren Hurst</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 11 / span 1;">
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 10 / span 1;">
             <div class="top"><span class="time">4:45 – 5:00</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 2</span><span class="who">Yuchi Huang</span></div>
           </div>
-          <div class="brk" style="grid-column: 1 / span 1; grid-row: 12 / span 1;"><span>Break</span></div>
-          <div class="brk" style="grid-column: 2 / span 1; grid-row: 12 / span 1;"><span>Break</span></div>
-          <div class="brk" style="grid-column: 3 / span 1; grid-row: 12 / span 1;"><span>Break</span></div>
-          <div class="card demo" style="grid-column: 4 / span 1; grid-row: 12 / span 8;">
+          <div class="brk" style="grid-column: 1 / span 1; grid-row: 11 / span 1;"><span>Break</span></div>
+          <div class="brk" style="grid-column: 2 / span 1; grid-row: 11 / span 1;"><span>Break</span></div>
+          <div class="brk" style="grid-column: 3 / span 1; grid-row: 11 / span 1;"><span>Break</span></div>
+          <div class="card demo" style="grid-column: 4 / span 1; grid-row: 11 / span 8;">
             <div class="top"><span class="time">5:00 – 7:00</span><span class="tag">Live demo</span></div>
             <div class="body"><span class="where">MegaFlex 3</span><span class="who">Playtest floor</span> <span class="dot">&#9679;</span> <span class="what">Yuchi Huang, Jit Thong Ng, Yuna Jiang, Pita Khangngern, Jahanvi Boka</span></div>
           </div>
-          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 13 / span 3;">
+          <div class="card keynote" style="grid-column: 1 / span 1; grid-row: 12 / span 3;">
             <div class="top"><span class="time">5:15 – 6:00</span><span class="tag">Keynote</span></div>
             <div class="body"><span class="where">Kaleide Theatre</span><span class="who">Closing address</span> <span class="dot">&#9679;</span> <span class="what">Talks continue after</span></div>
           </div>
-          <div class="card social" style="grid-column: 2 / span 2; grid-row: 13 / span 3;">
+          <div class="card social" style="grid-column: 2 / span 2; grid-row: 12 / span 3;">
             <div class="top"><span class="time">5:15 – 6:00</span><span class="tag">Networking</span></div>
             <div class="body"><span class="where">MegaFlex 1 &amp; 2</span><span class="who">Networking &amp; mingle space</span></div>
           </div>
-          <div class="brk" style="grid-column: 2 / span 1; grid-row: 16 / span 1;"><span>Break</span></div>
-          <div class="brk" style="grid-column: 3 / span 1; grid-row: 16 / span 1;"><span>Break</span></div>
-          <div class="card" style="grid-column: 2 / span 1; grid-row: 17 / span 1;">
+          <div class="brk" style="grid-column: 2 / span 1; grid-row: 15 / span 1;"><span>Break</span></div>
+          <div class="brk" style="grid-column: 3 / span 1; grid-row: 15 / span 1;"><span>Break</span></div>
+          <div class="card" style="grid-column: 2 / span 1; grid-row: 16 / span 1;">
             <div class="top"><span class="time">6:15 – 6:30</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 1</span><span class="who">Bingying Wang</span></div>
           </div>
-          <div class="card" style="grid-column: 3 / span 1; grid-row: 17 / span 1;">
+          <div class="card" style="grid-column: 3 / span 1; grid-row: 16 / span 1;">
             <div class="top"><span class="time">6:15 – 6:30</span><span class="tag">Talk</span></div>
             <div class="body"><span class="where">MegaFlex 2</span><span class="who">Esthefania Morantes Simanca</span></div>
           </div>
-          <div class="card packup" style="grid-column: 2 / span 1; grid-row: 18 / span 2;">
-            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Pack up</span></div>
-            <div class="body"><span class="where">MegaFlex 1</span><span class="who">Room clear</span></div>
-          </div>
-          <div class="card packup" style="grid-column: 3 / span 1; grid-row: 18 / span 2;">
-            <div class="top"><span class="time">6:30 – 7:00</span><span class="tag">Pack up</span></div>
-            <div class="body"><span class="where">MegaFlex 2</span><span class="who">Room clear</span></div>
-          </div>
-          <div class="card packup" style="grid-column: 4 / span 1; grid-row: 21 / span 2;">
-            <div class="top"><span class="time">7:15 – 7:45</span><span class="tag">Pack up</span></div>
-            <div class="body"><span class="where">MegaFlex 3</span><span class="who">Room clear</span></div>
-          </div>
         </div>
-
-        <p class="cap">Kaleide Theatre holds 150. Each MegaFlex holds 30.</p>
         </div>
       </section>
 
@@ -1449,23 +1414,23 @@
 
       <section class="panel ruled" data-panel="projects">
         <ul class="speakers works">
-          <li>Cumulative Interaction: Exploring Slow Technology, Embodied Interaction, and Temporal Persistence in Interactive Installation <sup>(3D / Interactive)</sup><span class="by">Ching-Yi Hsu</span><span class="frame"></span></li>
-          <li>Playing in the Garden: an interdisciplinary approach to socio-ecological place making <sup>(3D / Interactive)</sup><span class="by">Caitlin Butt</span><span class="frame"></span></li>
-          <li>Between Steps <sup>(3D / Interactive)</sup><span class="by">Yuchi Huang</span><span class="frame"></span></li>
-          <li>Re-Worlding &mdash; Re-Design, Re-Build <sup>(3D / Interactive)</sup><span class="by">Nathalynn Dhamabutra</span><span class="frame"></span></li>
-          <li>Symbolic Play through the Integration of Projection Mapping, Miniature Environments and Tactile Interaction <sup>(3D / Interactive)</sup><span class="by">Jit Thong Ng</span><span class="frame"></span></li>
-          <li>Symbolic Animated Documentary as a Method for Articulating Underrepresented Emotional Experience <sup>(Animation)</sup><span class="by">Clarissa Dias</span><span class="frame"></span></li>
-          <li>Cultural Heritage in Animation: Handcrafted Practices as a Design Methodology <sup>(Animation)</sup><span class="by">Sofia Moshkina</span><span class="frame"></span></li>
-          <li>Making Non-Serious Autobiographical Narrative Games: Procedural Rhetoric, Visual Metaphor and Humour <sup>(Games)</sup><span class="by">Esthefania Morantes Simanca</span><span class="frame"></span></li>
-          <li>To &lsquo;Play&rsquo; the Music of a Game: An Innovative Approach to Music-Based Gameplay <sup>(Games)</sup><span class="by">Yuna Jang</span><span class="frame"></span></li>
-          <li>Reading as Gameplay: Distributed Game Documents, Interpretation and World Discovery <sup>(Games)</sup><span class="by">Alex Wang</span><span class="frame"></span></li>
-          <li>Games as Sites of Player Alterbiography <sup>(Games)</sup><span class="by">Pita Khanngern</span><span class="frame"></span></li>
-          <li>Environment as an Emotional Character: Animated Mindscape Visualizing Guilt <sup>(Animation)</sup><span class="by">Patricia Wijaya</span><span class="frame"></span></li>
-          <li>To Watch, To Choose, To Connect: An Interactive Approach to Shared Cinematic Experiences <sup>(Animation)</sup><span class="by">Otis Nguyen</span><span class="frame"></span></li>
-          <li>Hybrid Animation and How It Can Change a Narrative <sup>(Animation)</sup><span class="by">Holly Nahrung</span><span class="frame"></span></li>
-          <li>Sleep Paralysis in VR: Gaze, Breath and Constraint in a Sleeper-Bus Environment <sup>(3D / Interactive)</sup><span class="by">Jahanvi</span><span class="frame"></span></li>
-          <li>Voice-Based Indirect Control and Character Autonomy in Horror Games <sup>(Games)</sup><span class="by">Sunny (Shengyang Zhang)</span><span class="frame"></span></li>
-          <li>Fostering Passion for Our Environment through the Combination of Art and Science <sup>(Animation)</sup><span class="by">Sarah Cohen</span><span class="frame"></span></li>
+          <li>Cumulative Interaction: Exploring Slow Technology, Embodied Interaction, and Temporal Persistence in Interactive Installation <sup>(3D / Interactive)</sup><span class="by">Ching-Yi Hsu</span></li>
+          <li>Playing in the Garden: an interdisciplinary approach to socio-ecological place making <sup>(3D / Interactive)</sup><span class="by">Caitlin Butt</span></li>
+          <li>Between Steps <sup>(3D / Interactive)</sup><span class="by">Yuchi Huang</span></li>
+          <li>Re-Worlding &mdash; Re-Design, Re-Build <sup>(3D / Interactive)</sup><span class="by">Nathalynn Dhamabutra</span></li>
+          <li>Symbolic Play through the Integration of Projection Mapping, Miniature Environments and Tactile Interaction <sup>(3D / Interactive)</sup><span class="by">Jit Thong Ng</span></li>
+          <li>Symbolic Animated Documentary as a Method for Articulating Underrepresented Emotional Experience <sup>(Animation)</sup><span class="by">Clarissa Dias</span></li>
+          <li>Cultural Heritage in Animation: Handcrafted Practices as a Design Methodology <sup>(Animation)</sup><span class="by">Sofia Moshkina</span></li>
+          <li>Making Non-Serious Autobiographical Narrative Games: Procedural Rhetoric, Visual Metaphor and Humour <sup>(Games)</sup><span class="by">Esthefania Morantes Simanca</span></li>
+          <li>To &lsquo;Play&rsquo; the Music of a Game: An Innovative Approach to Music-Based Gameplay <sup>(Games)</sup><span class="by">Yuna Jang</span></li>
+          <li>Reading as Gameplay: Distributed Game Documents, Interpretation and World Discovery <sup>(Games)</sup><span class="by">Alex Wang</span></li>
+          <li>Games as Sites of Player Alterbiography <sup>(Games)</sup><span class="by">Pita Khanngern</span></li>
+          <li>Environment as an Emotional Character: Animated Mindscape Visualizing Guilt <sup>(Animation)</sup><span class="by">Patricia Wijaya</span></li>
+          <li>To Watch, To Choose, To Connect: An Interactive Approach to Shared Cinematic Experiences <sup>(Animation)</sup><span class="by">Otis Nguyen</span></li>
+          <li>Hybrid Animation and How It Can Change a Narrative <sup>(Animation)</sup><span class="by">Holly Nahrung</span></li>
+          <li>Sleep Paralysis in VR: Gaze, Breath and Constraint in a Sleeper-Bus Environment <sup>(3D / Interactive)</sup><span class="by">Jahanvi</span></li>
+          <li>Voice-Based Indirect Control and Character Autonomy in Horror Games <sup>(Games)</sup><span class="by">Sunny (Shengyang Zhang)</span></li>
+          <li>Fostering Passion for Our Environment through the Combination of Art and Science <sup>(Animation)</sup><span class="by">Sarah Cohen</span></li>
         </ul>
       </section>
 
